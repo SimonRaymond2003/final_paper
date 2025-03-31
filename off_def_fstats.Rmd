@@ -1,0 +1,498 @@
+---
+title: "Combined Offensive and Defensive Position Group F-Statistics"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+date: "2025-03-26"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+library(knitr)
+library(kableExtra)
+library(dplyr)
+library(data.table)
+options(knitr.kable.NA = '')
+knitr::opts_chunk$set(comment = NA)
+```
+
+```{r load_matrices, warning=FALSE, message=FALSE}
+# Load all the matrices from CSVs
+# For T-values
+off_grades_tval <- read.csv("matrices/off_grades_tval.csv", row.names = 1)
+off_yards_tval <- read.csv("matrices/off_yards_tval.csv", row.names = 1)
+off_completions_tval <- read.csv("matrices/off_completions_tval.csv", row.names = 1)
+def_stops_tval <- read.csv("matrices/def_stops_tval.csv", row.names = 1)
+def_grades_tval <- read.csv("matrices/def_grades_tval.csv", row.names = 1)
+def_tackles_tval <- read.csv("matrices/def_tackles_tval.csv", row.names = 1)
+
+# For Marginal Effects
+off_grades_mfx <- read.csv("matrices/off_grades_mfx.csv", row.names = 1)
+off_yards_mfx <- read.csv("matrices/off_yards_mfx.csv", row.names = 1)
+off_completions_mfx <- read.csv("matrices/off_completions_mfx.csv", row.names = 1)
+def_stops_mfx <- read.csv("matrices/def_stops_mfx.csv", row.names = 1)
+def_grades_mfx <- read.csv("matrices/def_grades_mfx.csv", row.names = 1)
+def_tackles_mfx <- read.csv("matrices/def_tackles_mfx.csv", row.names = 1)
+
+# Function to simplify "present" variable names in matrices to a standard pattern
+rename_present_variables <- function(matrix) {
+  # Count to keep track of how many we've renamed
+  count <- 0
+  
+  # Get all row names
+  all_row_names <- rownames(matrix)
+  
+  # Check each row name for "present" anywhere in the string (case insensitive)
+  for (i in 1:length(all_row_names)) {
+    row_name <- all_row_names[i]
+    if (grepl("present", row_name, ignore.case = TRUE)) {
+      count <- count + 1
+      # Replace the name with a simple pattern that won't match position prefixes
+      rownames(matrix)[i] <- paste0("PresentVar", count)
+    }
+  }
+  
+  return(matrix)
+}
+
+# Apply the renaming to all matrices
+off_grades_tval <- rename_present_variables(off_grades_tval)
+off_yards_tval <- rename_present_variables(off_yards_tval)
+off_completions_tval <- rename_present_variables(off_completions_tval)
+def_stops_tval <- rename_present_variables(def_stops_tval)
+def_grades_tval <- rename_present_variables(def_grades_tval)
+def_tackles_tval <- rename_present_variables(def_tackles_tval)
+
+off_grades_mfx <- rename_present_variables(off_grades_mfx)
+off_yards_mfx <- rename_present_variables(off_yards_mfx)
+off_completions_mfx <- rename_present_variables(off_completions_mfx)
+def_stops_mfx <- rename_present_variables(def_stops_mfx)
+def_grades_mfx <- rename_present_variables(def_grades_mfx)
+def_tackles_mfx <- rename_present_variables(def_tackles_mfx)
+```
+
+```{r load_data_for_sample_size}
+# Load data for sample sizes
+off_grades_outcome <- fread("processed_predict_ccafd_off_grades.csv.csv.gz")
+off_grades_select <- fread("processed_predict_ccfd_off_grades.csv.csv.gz")
+off_yards_outcome <- fread("processed_predict_ccafd_off_yards.csv.csv.gz")
+off_yards_select <- fread("processed_predict_ccfd_off_yards.csv.csv.gz")
+off_completions_outcome <- fread("processed_predict_ccafd_off_completions.csv.csv.gz")
+off_completions_select <- fread("processed_predict_ccfd_off_completions.csv.csv.gz")
+
+def_grades_outcome <- fread("processed_predict_ccafd_def_grades.csv.csv.gz")
+def_grades_select <- fread("processed_predict_ccfd_def_grades.csv.csv.gz")
+def_stops_outcome <- fread("processed_predict_ccafd_def_stops.csv.csv.gz")
+def_stops_select <- fread("processed_predict_ccfd_def_stops.csv.csv.gz")
+def_tackles_outcome <- fread("processed_predict_ccafd_def_tackles.csv.csv.gz")
+def_tackles_select <- fread("processed_predict_ccfd_def_tackles.csv.csv.gz")
+
+# Store sample sizes
+sample_sizes <- list(
+  off_grades = list(outcome = nrow(off_grades_outcome), select = nrow(off_grades_select)),
+  off_yards = list(outcome = nrow(off_yards_outcome), select = nrow(off_yards_select)),
+  off_completions = list(outcome = nrow(off_completions_outcome), select = nrow(off_completions_select)),
+  def_grades = list(outcome = nrow(def_grades_outcome), select = nrow(def_grades_select)),
+  def_stops = list(outcome = nrow(def_stops_outcome), select = nrow(def_stops_select)),
+  def_tackles = list(outcome = nrow(def_tackles_outcome), select = nrow(def_tackles_select))
+)
+```
+
+```{r rename_columns, warning=FALSE, message=FALSE}
+# Rename columns to replace dots with spaces and model names
+rename_columns <- function(df) {
+  colnames(df) <- gsub("\\.", " ", colnames(df))
+  # Also rename OLS to LPM and Player to On-Field in column names
+  colnames(df) <- gsub("OLS", "LPM", colnames(df))
+  colnames(df) <- gsub("Player", "On-Field", colnames(df))
+  return(df)
+}
+
+# Apply the column rename to all matrices
+off_grades_tval <- rename_columns(off_grades_tval)
+off_yards_tval <- rename_columns(off_yards_tval)
+off_completions_tval <- rename_columns(off_completions_tval)
+def_stops_tval <- rename_columns(def_stops_tval)
+def_grades_tval <- rename_columns(def_grades_tval)
+def_tackles_tval <- rename_columns(def_tackles_tval)
+
+off_grades_mfx <- rename_columns(off_grades_mfx)
+off_yards_mfx <- rename_columns(off_yards_mfx)
+off_completions_mfx <- rename_columns(off_completions_mfx)
+def_stops_mfx <- rename_columns(def_stops_mfx)
+def_grades_mfx <- rename_columns(def_grades_mfx)
+def_tackles_mfx <- rename_columns(def_tackles_mfx)
+```
+
+```{r functions, results='asis', echo=FALSE, message=FALSE, warning=FALSE}
+options(knitr.table.format = "latex")
+
+# Function to format F-statistics for joint significance tests with stars
+format_joint_test <- function(f_stat, df1, df2) {
+  if (is.na(f_stat) || is.na(df1) || is.na(df2)) {
+    return(list(
+      f_stat = "NA",
+      df = "[NA,NA]"
+    ))
+  }
+  
+  # Calculate p-value from F distribution
+  tryCatch({
+    p_value <- pf(f_stat, df1, df2, lower.tail = FALSE)
+    
+    # Add stars based on significance
+    stars <- ""
+    if (!is.na(p_value)) {
+      if (p_value < 0.01) stars <- "***"
+      else if (p_value < 0.05) stars <- "**"
+      else if (p_value < 0.10) stars <- "*"
+    }
+    
+    # Format output
+    formatted <- sprintf("%.2f%s", f_stat, stars)
+    df_str <- sprintf("[%d,%d]", df1, df2)
+    
+    return(list(
+      f_stat = formatted,
+      df = df_str
+    ))
+  }, error = function(e) {
+    return(list(
+      f_stat = "NA",
+      df = "[NA,NA]"
+    ))
+  })
+}
+
+# Function to calculate joint F-test for a group of variables
+calculate_joint_test <- function(mfx_matrix, tval_matrix, variables, col_name, dataset_name) {
+  tryCatch({
+    # Get column indices
+    col_idx <- which(colnames(mfx_matrix) == col_name)
+    
+    # Extract coefficients and standard errors for the group
+    coefficients <- mfx_matrix[variables, col_idx]
+    t_values <- tval_matrix[variables, col_idx]
+    
+    # Remove any NA values
+    valid_idx <- !is.na(coefficients) & !is.na(t_values)
+    if (sum(valid_idx) == 0) {
+      return(list(f_stat = "NA", df = "[NA,NA]"))
+    }
+    
+    coefficients <- coefficients[valid_idx]
+    t_values <- t_values[valid_idx]
+    
+    # Handle single variable case
+    if (length(coefficients) == 1) {
+      f_stat <- t_values^2
+      df1 <- 1
+      df2 <- nrow(mfx_matrix) - 1
+    } else {
+      std_errors <- coefficients / t_values
+      # Construct covariance matrix (assuming independence)
+      V <- diag(std_errors^2)
+      
+      # Calculate F-statistic using matrix form of Wald test
+      k <- length(coefficients)  # number of restrictions
+      f_stat <- try((t(coefficients) %*% solve(V) %*% coefficients) / k)
+      if (inherits(f_stat, "try-error")) {
+        return(list(f_stat = "NA", df = "[NA,NA]"))
+      }
+      
+      # Degrees of freedom
+      df1 <- k
+      # Get appropriate sample size based on model and dataset
+      if (grepl("Attempt", col_name)) {
+        df2 <- sample_sizes[[dataset_name]]$select - k
+      } else {
+        df2 <- sample_sizes[[dataset_name]]$outcome - k
+      }
+    }
+    
+    return(format_joint_test(as.numeric(f_stat), df1, df2))
+  }, error = function(e) {
+    return(list(f_stat = "NA", df = "[NA,NA]"))
+  })
+}
+
+# Function to get all offensive or defensive position variables
+get_position_variables <- function(matrix, is_offense) {
+  all_variables <- rownames(matrix)
+  position_vars <- character(0)
+  
+  if (is_offense) {
+    # Get all offensive position variables
+    position_vars <- c(
+      grep("^QB_", all_variables, value = TRUE),
+      grep("^RB_", all_variables, value = TRUE),
+      grep("^WR1_", all_variables, value = TRUE),
+      grep("^WR2_", all_variables, value = TRUE),
+      grep("^WR3_", all_variables, value = TRUE),
+      grep("^TE1_", all_variables, value = TRUE),
+      grep("^OL1_", all_variables, value = TRUE),
+      grep("^OL2_", all_variables, value = TRUE),
+      grep("^OL3_", all_variables, value = TRUE),
+      grep("^OL4_", all_variables, value = TRUE),
+      grep("^OL5_", all_variables, value = TRUE)
+    )
+  } else {
+    # Get all defensive position variables
+    position_vars <- c(
+      grep("^DL1_", all_variables, value = TRUE),
+      grep("^DL2_", all_variables, value = TRUE),
+      grep("^DL3_", all_variables, value = TRUE),
+      grep("^DL4_", all_variables, value = TRUE),
+      grep("^LB1_", all_variables, value = TRUE),
+      grep("^LB2_", all_variables, value = TRUE),
+      grep("^LB3_", all_variables, value = TRUE),
+      grep("^LB4_", all_variables, value = TRUE),
+      grep("^CB1_", all_variables, value = TRUE),
+      grep("^CB2_", all_variables, value = TRUE),
+      grep("^CB3_", all_variables, value = TRUE),
+      grep("^S1_", all_variables, value = TRUE),
+      grep("^S2_", all_variables, value = TRUE),
+      grep("^S3_", all_variables, value = TRUE)
+    )
+  }
+  
+  return(position_vars)
+}
+```
+
+```{r create_tables, results='asis', echo=FALSE, message=FALSE, warning=FALSE}
+# Define datasets
+offense_datasets <- list(
+  "off_grades" = list(
+    name = "Offense Grades",
+    mfx = off_grades_mfx,
+    tval = off_grades_tval
+  ),
+  "off_yards" = list(
+    name = "Offense Yards",
+    mfx = off_yards_mfx,
+    tval = off_yards_tval
+  ),
+  "off_completions" = list(
+    name = "Offense Completions",
+    mfx = off_completions_mfx,
+    tval = off_completions_tval
+  )
+)
+
+defense_datasets <- list(
+  "def_grades" = list(
+    name = "Defense Grades",
+    mfx = def_grades_mfx,
+    tval = def_grades_tval
+  ),
+  "def_stops" = list(
+    name = "Defense Stops",
+    mfx = def_stops_mfx,
+    tval = def_stops_tval
+  ),
+  "def_tackles" = list(
+    name = "Defense Tackles",
+    mfx = def_tackles_mfx,
+    tval = def_tackles_tval
+  )
+)
+
+# Define model columns
+model_cols <- c(
+  "Starter LPM", "Starter Probit", "Starter Logit", 
+  "On-Field LPM", "On-Field Probit", "On-Field Logit", 
+  "Attempt LPM", "Attempt Probit", "Attempt Logit"
+)
+
+# Create F-statistics table for offense datasets
+create_offense_fstats_table <- function() {
+  offense_table <- data.frame(Dataset = character(), stringsAsFactors = FALSE)
+  
+  # Add columns for each model
+  for (col in model_cols) {
+    offense_table[[col]] <- character()
+  }
+  
+  # Process each dataset
+  row_idx <- 1
+  for (dataset_key in names(offense_datasets)) {
+    dataset <- offense_datasets[[dataset_key]]
+    mfx_matrix <- dataset$mfx
+    tval_matrix <- dataset$tval
+    
+    # Get all offensive position variables
+    position_vars <- get_position_variables(mfx_matrix, is_offense = TRUE)
+    
+    # Add dataset row
+    offense_table[row_idx, "Dataset"] <- dataset$name
+    
+    # Calculate joint tests for each model
+    for (col in model_cols) {
+      if (col %in% colnames(mfx_matrix)) {
+        test_result <- calculate_joint_test(
+          mfx_matrix, tval_matrix, 
+          position_vars, 
+          col, dataset_key
+        )
+        offense_table[row_idx, col] <- paste0(test_result$f_stat, " ", test_result$df)
+      } else {
+        offense_table[row_idx, col] <- ""
+      }
+    }
+    
+    row_idx <- row_idx + 1
+  }
+  
+  return(offense_table)
+}
+
+# Create F-statistics table for defense datasets
+create_defense_fstats_table <- function() {
+  defense_table <- data.frame(Dataset = character(), stringsAsFactors = FALSE)
+  
+  # Add columns for each model
+  for (col in model_cols) {
+    defense_table[[col]] <- character()
+  }
+  
+  # Process each dataset
+  row_idx <- 1
+  for (dataset_key in names(defense_datasets)) {
+    dataset <- defense_datasets[[dataset_key]]
+    mfx_matrix <- dataset$mfx
+    tval_matrix <- dataset$tval
+    
+    # Get all defensive position variables
+    position_vars <- get_position_variables(mfx_matrix, is_offense = FALSE)
+    
+    # Add dataset row
+    defense_table[row_idx, "Dataset"] <- dataset$name
+    
+    # Calculate joint tests for each model
+    for (col in model_cols) {
+      if (col %in% colnames(mfx_matrix)) {
+        test_result <- calculate_joint_test(
+          mfx_matrix, tval_matrix, 
+          position_vars, 
+          col, dataset_key
+        )
+        defense_table[row_idx, col] <- paste0(test_result$f_stat, " ", test_result$df)
+      } else {
+        defense_table[row_idx, col] <- ""
+      }
+    }
+    
+    row_idx <- row_idx + 1
+  }
+  
+  return(defense_table)
+}
+
+# Generate the tables
+offense_fstats_table <- create_offense_fstats_table()
+defense_fstats_table <- create_defense_fstats_table()
+
+# Control variable categories
+control_categories <- c("Game Situation", "Coach Variables", "Team Stats", "Season/Team FE", "Coach FE", "GIMR", "Player Presence")
+
+# Create control variables section for offense
+create_control_variables <- function(is_offense) {
+  control_data <- data.frame(
+    Dataset = c("Control Variables", control_categories,
+                if(is_offense) c("Control Def. Players", "Control Off. Players") 
+                else c("Control Off. Players", "Control Def. Players")),
+    stringsAsFactors = FALSE
+  )
+  
+  # Add columns for each model
+  for (col in model_cols) {
+    # Initialize with "Yes" for standard controls
+    control_vals <- c("", rep("Yes", length(control_categories)))
+    
+    # Special case for Season/Team FE in Attempt models
+    if (grepl("Attempt", col) && "Season/Team FE" %in% control_categories) {
+      season_idx <- which(control_categories == "Season/Team FE")
+      control_vals[season_idx + 1] <- "No"
+    }
+    
+    # Special case for Coach FE in Starter models
+    if (grepl("Starter", col) && "Coach FE" %in% control_categories) {
+      coach_idx <- which(control_categories == "Coach FE")
+      control_vals[coach_idx + 1] <- "No"
+    }
+    
+    # Special case for GIMR in Attempt models
+    if (grepl("Attempt", col) && "GIMR" %in% control_categories) {
+      gimr_idx <- which(control_categories == "GIMR")
+      control_vals[gimr_idx + 1] <- "No"
+    }
+    
+    # Handle Player Presence control - Yes for On-Field and Starter, No for Attempt
+    player_presence_idx <- which(control_categories == "Player Presence")
+    if (grepl("Attempt", col)) {
+      control_vals[player_presence_idx + 1] <- "No"
+    } else {
+      control_vals[player_presence_idx + 1] <- "Yes"
+    }
+    
+    # Add values for player variable controls
+    if (is_offense) {
+      control_vals <- c(control_vals, "No", "Yes")
+    } else {
+      control_vals <- c(control_vals, "Yes", "No")
+    }
+    
+    control_data[[col]] <- control_vals
+  }
+  
+  return(control_data)
+}
+
+# Function to format and print a table
+format_and_print_table <- function(table_data, control_data, caption) {
+  # Combine F-statistics table with control variables
+  combined_table <- rbind(table_data, control_data)
+  
+  # Add a blank row between the F-statistics and control variables
+  blank_row_index <- nrow(table_data) + 1
+  
+  kable(combined_table, 
+        format = "latex", 
+        booktabs = TRUE,
+        linesep = "",
+        caption = caption,
+        align = c('l', rep('c', 9)),
+        escape = FALSE) %>%
+    kable_styling(latex_options = c("scale_down", "hold_position"),
+                  full_width = FALSE,
+                  font_size = 10) %>%
+    row_spec(0, bold = TRUE) %>%
+    row_spec(blank_row_index - 1, extra_latex_after = "\\midrule") %>%
+    row_spec(blank_row_index, bold = TRUE, background = "#D3D3D3") %>%
+    add_header_above(c(" " = 1, "Starter Models" = 3, "On-Field Models" = 3, "Attempt Models" = 3)) %>%
+    column_spec(1, width = "4cm") %>%
+    footnote(
+      general = "F-statistics reported with degrees of freedom [df1,df2] and significance levels for ALL position variables combined.",
+      symbol = c("* p < 0.10, ** p < 0.05, *** p < 0.01")
+    )
+}
+
+# Create control variables data
+offense_control_data <- create_control_variables(is_offense = TRUE)
+defense_control_data <- create_control_variables(is_offense = FALSE)
+
+# Print the offensive table
+format_and_print_table(
+  offense_fstats_table,
+  offense_control_data,
+  "F-Statistics for ALL Offensive Position Variables Combined"
+)
+
+# Print the defensive table
+format_and_print_table(
+  defense_fstats_table,
+  defense_control_data,
+  "F-Statistics for ALL Defensive Position Variables Combined"
+)
+```

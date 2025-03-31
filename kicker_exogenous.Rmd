@@ -1,0 +1,700 @@
+---
+title: "Kicker Exogenous Analysis"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE)
+library(data.table)
+library(lmtest)
+library(sandwich)
+library(car)
+library(caret)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(magrittr)
+
+# Options for better output
+options(max.print=10000)
+
+# Table formatting options
+options(knitr.kable.NA = '')
+knitr::opts_chunk$set(comment = NA)
+```
+
+```{r analysis, warning=FALSE, message=FALSE}
+# Load additional libraries for model estimation and plotting
+library(ggplot2)     # For plotting
+library(gridExtra)   # For arranging multiple plots
+library(RColorBrewer) # For color palettes
+
+# Column Name Transformer for Football Analytics
+transform_column_names <- function(df) {
+  # Position mapping
+  offense_positions <- c(
+    # QB slots (1-3)
+    "1" = "QB", "2" = "QB2", "3" = "QB3",
+    # Backs slots (4-7)
+    "4" = "RB", "5" = "RB2", "6" = "FB", "7" = "FB2",
+    # Wide receivers slots (8-13)
+    "8" = "WR1", "9" = "WR2", "10" = "WR3", "11" = "WR4", "12" = "WR5", "13" = "WR6",
+    # Tight ends slots (14-16)
+    "14" = "TE1", "15" = "TE2", "16" = "TE3",
+    # Offensive line slots (17-24)
+    "17" = "OL", "18" = "OL", "19" = "OL", "20" = "OL", "21" = "OL", 
+    "22" = "OL", "23" = "OL", "24" = "OL"
+  )
+  
+  defense_positions <- c(
+    # Defensive line slots (1-8)
+    "1" = "DL1", "2" = "DL2", "3" = "DL3", "4" = "DL4", 
+    "5" = "DL5", "6" = "DL6", "7" = "DL7", "8" = "DL8",
+    # Linebackers slots (9-14)
+    "9" = "LB1", "10" = "LB2", "11" = "LB3", "12" = "LB4", 
+    "13" = "LB5", "14" = "LB6",
+    # Cornerbacks slots (15-19)
+    "15" = "CB1", "16" = "CB2", "17" = "CB3", "18" = "CB4", "19" = "CB5",
+    # Safeties slots (20-23)
+    "20" = "S1", "21" = "S2", "22" = "S3", "23" = "S4"
+  )
+  
+  # Get column names
+  cols <- colnames(df)
+  new_cols <- cols
+  
+  for (i in seq_along(cols)) {
+    col <- cols[i]
+    
+    # Handle offense player patterns
+    if (grepl("offense_player_", col)) {
+      player_num <- gsub(".*offense_player_([0-9\\-]+).*", "\\1", col)
+      
+      # Determine position
+      if (grepl("-", player_num)) {
+        position <- "OL"
+      } else if (player_num %in% names(offense_positions)) {
+        position <- offense_positions[player_num]
+      } else {
+        position <- paste0("OFF", player_num)
+      }
+      
+      # Replace pattern and remove first two words after
+      if (grepl("^starter_", col)) {
+        parts <- strsplit(gsub("starter_offense_player_[0-9\\-]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste("starter", position, paste(parts, collapse = "_"), sep = "_")
+      } else {
+        parts <- strsplit(gsub("offense_player_[0-9\\-]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste(position, paste(parts, collapse = "_"), sep = "_")
+      }
+    }
+    
+    # Handle defense player patterns
+    else if (grepl("defense_player_", col)) {
+      player_num <- gsub(".*defense_player_([0-9]+).*", "\\1", col)
+      
+      # Determine position
+      if (player_num %in% names(defense_positions)) {
+        position <- defense_positions[player_num]
+      } else {
+        position <- paste0("DEF", player_num)
+      }
+      
+      # Replace pattern and remove first two words after
+      if (grepl("^starter_", col)) {
+        parts <- strsplit(gsub("starter_defense_player_[0-9]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste("starter", position, paste(parts, collapse = "_"), sep = "_")
+      } else {
+        parts <- strsplit(gsub("defense_player_[0-9]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste(position, paste(parts, collapse = "_"), sep = "_")
+      }
+    }
+  }
+  
+  # Set the new column names
+  colnames(df) <- new_cols
+  return(df)
+}
+
+# List of CTD1 datasets to analyze - limited to 3 offense and 3 defense datasets
+ctd1_datasets <- c(
+  # Offense - only grades, yards, and completions
+  "processed_predict_cctd1_starters_off_grades.csv_predict_cctd1_players_off_grades.csv.csv.gz",
+  "processed_predict_cctd1_starters_off_yards.csv_predict_cctd1_players_off_yards.csv.csv.gz",
+  "processed_predict_cctd1_starters_off_completions.csv_predict_cctd1_players_off_completions.csv.csv.gz",
+  # Defense - only stops, tackles, and grades
+  "processed_predict_cctd1_starters_def_stops.csv_predict_cctd1_players_def_stops.csv.csv.gz",
+  "processed_predict_cctd1_starters_def_tackles.csv_predict_cctd1_players_def_tackles.csv.csv.gz",
+  "processed_predict_cctd1_starters_def_grades.csv_predict_cctd1_players_def_grades.csv.csv.gz"
+)
+
+# For display names - limited to the 6 datasets we're analyzing
+dataset_names <- c(
+  "Off Grades", "Off Yards", "Off Completions",
+  "Def Stops", "Def Tackles", "Def Grades"
+)
+
+# Variables to track across models - using only 12w versions
+tracked_vars <- c(
+  "p_player_26_punting_grades_grades_punter_12w",
+  "k_player_25_field_goals_grades_grades_fgep_kicker_12w"
+)
+
+# Updated variable names after transformation
+transformed_tracked_vars <- c(
+  "P_punting_grades_punter_12w",
+  "K_field_goals_grades_fgep_kicker_12w"
+)
+
+# Display names for tracked variables
+tracked_var_display <- c(
+  "Punter Grades (12w)",
+  "Kicker FG Grades (12w)"
+)
+
+# Yardline ranges - using hyphens instead of underscores to avoid LaTeX issues
+yardline_ranges <- c("1-10", "11-20", "21-30", "31-40", "41-50", 
+                   "51-60", "61-70", "71-80", "81-90", "91-100")
+
+# Store results for each dataset and model type
+# Structure: list[dataset_index][model_type][yardline_index][variable_index]
+# model_type is one of: "lpm", "probit", "logit"
+all_results <- vector("list", length(ctd1_datasets))
+names(all_results) <- dataset_names
+
+for(d in 1:length(ctd1_datasets)) {
+  all_results[[d]] <- list(
+    "lpm" = vector("list", length(yardline_ranges)),
+    "probit" = vector("list", length(yardline_ranges)),
+    "logit" = vector("list", length(yardline_ranges))
+  )
+  names(all_results[[d]][["lpm"]]) <- yardline_ranges
+  names(all_results[[d]][["probit"]]) <- yardline_ranges
+  names(all_results[[d]][["logit"]]) <- yardline_ranges
+}
+
+# Store control variable info for each dataset
+control_info <- vector("list", length(ctd1_datasets))
+names(control_info) <- dataset_names
+
+# Function to analyze data for one dataset and one yardline
+analyze_yardline <- function(file_path, yardline_var) {
+  # Convert hyphen to underscore for file lookup
+  yardline_lookup <- gsub("-", "_", yardline_var)
+  
+  # Check if file exists
+  if (!file.exists(file_path)) {
+    return(NULL)
+  }
+  
+  # Read data
+  tryCatch({
+    dt <- fread(file_path)
+    
+    # Apply column name transformation
+    dt <- transform_column_names(dt)
+    
+    # Check for yardline column
+    yardline_col <- paste0("yardline_", yardline_lookup)
+    if (!yardline_col %in% names(dt)) {
+      return(NULL)
+    }
+    
+    # Filter by yardline
+    dt_filtered <- dt[dt[[yardline_col]] == 1]
+    
+    if (nrow(dt_filtered) < 50) {
+      return(NULL)
+    }
+    
+    # Check if necessary variables are present
+    # Check if tracked variables are present
+    var_present <- FALSE
+    var_to_use <- character(0)
+    
+    # Check for original variable names
+    for (var in tracked_vars) {
+      if (var %in% names(dt_filtered)) {
+        var_present <- TRUE
+        var_to_use <- c(var_to_use, var)
+      }
+    }
+    
+    # Check for transformed variable names
+    for (var in transformed_tracked_vars) {
+      if (var %in% names(dt_filtered)) {
+        var_present <- TRUE
+        var_to_use <- c(var_to_use, var)
+      }
+    }
+    
+    if (!var_present) {
+      return(NULL)
+    }
+    
+    # Check if outcome variable exists
+    if (!"conversion" %in% names(dt_filtered)) {
+      return(NULL)
+    }
+    
+    # Clean data for regression
+    if ("my_id" %in% names(dt_filtered)) dt_filtered[, my_id := NULL]
+    yardline_cols <- grep("^yardline_", names(dt_filtered), value = TRUE)
+    if (length(yardline_cols) > 0) dt_filtered[, (yardline_cols) := NULL]
+    
+    # Results container for all models
+    results <- list(
+      lpm = list(),
+      probit = list(),
+      logit = list()
+    )
+    
+    # 1. Run LPM model
+    tryCatch({
+      LPM_model <- lm(conversion ~ ., data = dt_filtered)
+      robust_test_lpm <- coeftest(LPM_model, vcov = vcovHC(LPM_model, type = "HC0"))
+      
+      # Process t-values for LPM
+      if (tracked_vars[1] %in% rownames(robust_test_lpm)) {
+        results$lpm[[1]] <- robust_test_lpm[tracked_vars[1], "t value"]
+      } else if (transformed_tracked_vars[1] %in% rownames(robust_test_lpm)) {
+        results$lpm[[1]] <- robust_test_lpm[transformed_tracked_vars[1], "t value"]
+      } else {
+        results$lpm[[1]] <- NA
+      }
+      
+      if (tracked_vars[2] %in% rownames(robust_test_lpm)) {
+        results$lpm[[2]] <- robust_test_lpm[tracked_vars[2], "t value"]
+      } else if (transformed_tracked_vars[2] %in% rownames(robust_test_lpm)) {
+        results$lpm[[2]] <- robust_test_lpm[transformed_tracked_vars[2], "t value"]
+      } else {
+        results$lpm[[2]] <- NA
+      }
+      
+      # Check for control variables - only needs to be done once
+      has_game_situation <- any(grepl("down_|distance_|quarter_|score_diff|home_team", names(LPM_model$coefficients)))
+      has_environmental <- any(grepl("temp_|wind_|precipitation|roof_type", names(LPM_model$coefficients)))
+      has_coach <- any(grepl("coach_", names(LPM_model$coefficients)))
+      has_team_stats <- any(grepl("team_stats_", names(LPM_model$coefficients)))
+      has_player_vars <- any(grepl("^QB_|^RB_|^WR|^TE|^OL_|^DL|^LB|^CB|^S_", names(LPM_model$coefficients)))
+      has_team_fe <- any(grepl("team_", names(LPM_model$coefficients))) || any(grepl("season_", names(LPM_model$coefficients)))
+      has_coach_fe <- any(grepl("^Chuck_|^Bruce_|^Sean_", names(LPM_model$coefficients)))
+    }, error = function(e) {
+      results$lpm[[1]] <- NA
+      results$lpm[[2]] <- NA
+      has_game_situation <- FALSE
+      has_environmental <- FALSE
+      has_coach <- FALSE
+      has_team_stats <- FALSE
+      has_player_vars <- FALSE
+      has_team_fe <- FALSE
+      has_coach_fe <- FALSE
+    })
+    
+    # 2. Run Probit model
+    tryCatch({
+      Probit_model <- glm(conversion ~ ., data = dt_filtered, family = binomial(link = "probit"))
+      robust_test_probit <- coeftest(Probit_model, vcov = vcovHC(Probit_model, type = "HC0"))
+      
+      # Process t-values for Probit
+      if (tracked_vars[1] %in% rownames(robust_test_probit)) {
+        results$probit[[1]] <- robust_test_probit[tracked_vars[1], "z value"]
+      } else if (transformed_tracked_vars[1] %in% rownames(robust_test_probit)) {
+        results$probit[[1]] <- robust_test_probit[transformed_tracked_vars[1], "z value"]
+      } else {
+        results$probit[[1]] <- NA
+      }
+      
+      if (tracked_vars[2] %in% rownames(robust_test_probit)) {
+        results$probit[[2]] <- robust_test_probit[tracked_vars[2], "z value"]
+      } else if (transformed_tracked_vars[2] %in% rownames(robust_test_probit)) {
+        results$probit[[2]] <- robust_test_probit[transformed_tracked_vars[2], "z value"]
+      } else {
+        results$probit[[2]] <- NA
+      }
+    }, error = function(e) {
+      results$probit[[1]] <- NA
+      results$probit[[2]] <- NA
+    })
+    
+    # 3. Run Logit model
+    tryCatch({
+      Logit_model <- glm(conversion ~ ., data = dt_filtered, family = binomial(link = "logit"))
+      robust_test_logit <- coeftest(Logit_model, vcov = vcovHC(Logit_model, type = "HC0"))
+      
+      # Process t-values for Logit
+      if (tracked_vars[1] %in% rownames(robust_test_logit)) {
+        results$logit[[1]] <- robust_test_logit[tracked_vars[1], "z value"]
+      } else if (transformed_tracked_vars[1] %in% rownames(robust_test_logit)) {
+        results$logit[[1]] <- robust_test_logit[transformed_tracked_vars[1], "z value"]
+      } else {
+        results$logit[[1]] <- NA
+      }
+      
+      if (tracked_vars[2] %in% rownames(robust_test_logit)) {
+        results$logit[[2]] <- robust_test_logit[tracked_vars[2], "z value"]
+      } else if (transformed_tracked_vars[2] %in% rownames(robust_test_logit)) {
+        results$logit[[2]] <- robust_test_logit[transformed_tracked_vars[2], "z value"]
+      } else {
+        results$logit[[2]] <- NA
+      }
+    }, error = function(e) {
+      results$logit[[1]] <- NA
+      results$logit[[2]] <- NA
+    })
+    
+    # Store sample size
+    results$n <- nrow(dt_filtered)
+    
+    # Add control info
+    results$controls <- list(
+      game_situation = has_game_situation,
+      environmental = has_environmental,
+      coach = has_coach,
+      team_stats = has_team_stats,
+      player_vars = has_player_vars,
+      team_fe = has_team_fe,
+      coach_fe = has_coach_fe
+    )
+    
+    return(results)
+  }, error = function(e) {
+    return(NULL)
+  })
+}
+
+# Process each dataset
+for (d in 1:length(ctd1_datasets)) {
+  dataset_path <- ctd1_datasets[d]
+  
+  # Initialize model structures if they were overwritten
+  if (!is.list(all_results[[d]]) || !("lpm" %in% names(all_results[[d]]))) {
+    all_results[[d]] <- list(
+      "lpm" = vector("list", length(yardline_ranges)),
+      "probit" = vector("list", length(yardline_ranges)),
+      "logit" = vector("list", length(yardline_ranges))
+    )
+    names(all_results[[d]][["lpm"]]) <- yardline_ranges
+    names(all_results[[d]][["probit"]]) <- yardline_ranges
+    names(all_results[[d]][["logit"]]) <- yardline_ranges
+  }
+  
+  # Store control variables for this dataset
+  control_info[[d]] <- list(
+    game_situation = FALSE,
+    environmental = FALSE,
+    coach = FALSE,
+    team_stats = FALSE,
+    player_vars = FALSE,
+    player_presence = TRUE,  # Default to TRUE but will be overridden in controls
+    team_fe = FALSE,
+    coach_fe = FALSE
+  )
+  
+  # Process each yardline range
+  for (yl in 1:length(yardline_ranges)) {
+    yardline_var <- yardline_ranges[yl]
+    
+    # Run analysis
+    result <- analyze_yardline(dataset_path, yardline_var)
+    
+    # Store results for all three model types
+    if (!is.null(result)) {
+      # Store LPM results
+      all_results[[d]][["lpm"]][[yl]] <- c(
+        punter = as.numeric(result$lpm[[1]]), 
+        kicker = as.numeric(result$lpm[[2]]), 
+        n = result$n
+      )
+      
+      # Store Probit results
+      all_results[[d]][["probit"]][[yl]] <- c(
+        punter = as.numeric(result$probit[[1]]), 
+        kicker = as.numeric(result$probit[[2]]), 
+        n = result$n
+      )
+      
+      # Store Logit results
+      all_results[[d]][["logit"]][[yl]] <- c(
+        punter = as.numeric(result$logit[[1]]), 
+        kicker = as.numeric(result$logit[[2]]), 
+        n = result$n
+      )
+      
+      # Update control info (use the most recent non-NULL result)
+      if (!is.null(result$controls)) {
+        control_info[[d]] <- result$controls
+      }
+    } else {
+      # Set all model types to NA
+      all_results[[d]][["lpm"]][[yl]] <- c(punter = NA_real_, kicker = NA_real_, n = 0)
+      all_results[[d]][["probit"]][[yl]] <- c(punter = NA_real_, kicker = NA_real_, n = 0)
+      all_results[[d]][["logit"]][[yl]] <- c(punter = NA_real_, kicker = NA_real_, n = 0)
+    }
+  }
+}
+
+# Create plots comparing models
+```
+
+```{r plots, fig.width=10, fig.height=8, warning=FALSE, message=FALSE}
+# Create plots for each dataset and variable
+for (d in 1:length(ctd1_datasets)) {
+  dataset_name <- dataset_names[d]
+  
+  # Loop through variables
+  for (v in 1:2) {
+    var_name <- tracked_var_display[v]
+    var_key <- c("punter", "kicker")[v]
+    
+    # Collect t-values across models and yardlines
+    plot_data <- data.frame(
+      yardline = rep(yardline_ranges, 3),
+      model = rep(c("LPM", "Probit", "Logit"), each = length(yardline_ranges)),
+      tvalue = numeric(length(yardline_ranges) * 3)
+    )
+    
+    # Fill in t-values for each model
+    for (yl in 1:length(yardline_ranges)) {
+      # LPM
+      plot_data$tvalue[(yl + (1-1) * length(yardline_ranges))] <- 
+        as.numeric(all_results[[d]][["lpm"]][[yl]][var_key])
+      
+      # Probit
+      plot_data$tvalue[(yl + (2-1) * length(yardline_ranges))] <- 
+        as.numeric(all_results[[d]][["probit"]][[yl]][var_key])
+      
+      # Logit
+      plot_data$tvalue[(yl + (3-1) * length(yardline_ranges))] <- 
+        as.numeric(all_results[[d]][["logit"]][[yl]][var_key])
+    }
+    
+    # Convert yardline to factor for proper ordering
+    plot_data$yardline <- factor(plot_data$yardline, levels = yardline_ranges)
+    plot_data$model <- factor(plot_data$model, levels = c("LPM", "Probit", "Logit"))
+    
+    # Create plot
+    p <- ggplot(plot_data, aes(x = yardline, y = tvalue, fill = model)) +
+      geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+      geom_hline(yintercept = 0, linetype = "dashed", color = "darkgray") +
+      labs(
+        title = paste0(dataset_name, ": ", var_name, " t-values by Model Type"),
+        x = "Yardline Range",
+        y = "t-value",
+        fill = "Model Type"
+      ) +
+      theme_minimal() +
+      theme(
+        plot.title = element_text(size = 12, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title = element_text(face = "bold"),
+        legend.position = "bottom",
+        panel.grid.major = element_line(color = "gray90"),
+        panel.grid.minor = element_line(color = "gray95"),
+        panel.background = element_rect(fill = "white"),
+        # Add horizontal lines between model types
+        panel.border = element_rect(color = "gray80", fill = NA)
+      ) +
+      # Highlight significance with different color intensities
+      scale_fill_brewer(palette = "Set1") +
+      # Add significance indicators
+      geom_text(
+        aes(
+          label = ifelse(
+            abs(tvalue) > 2.58, "***",
+            ifelse(abs(tvalue) > 1.96, "**",
+            ifelse(abs(tvalue) > 1.65, "*",
+            ifelse(abs(tvalue) > 1.44, ".", "")))
+          ),
+          y = tvalue + sign(tvalue) * 0.2
+        ),
+        position = position_dodge(width = 0.8),
+        vjust = ifelse(plot_data$tvalue >= 0, 0, 1)
+      )
+    
+    # Print the plot
+    print(p)
+  }
+}
+```
+
+```{r tables, results='asis'}
+create_dataset_table <- function(dataset_index) {
+  dataset_name <- dataset_names[dataset_index]
+  dataset_results <- all_results[[dataset_index]]
+  
+  # Create a simplified table structure to avoid column mismatch issues
+  df <- data.frame(
+    Variable = character(),
+    stringsAsFactors = FALSE
+  )
+  
+  # Create a vector of row labels in the exact order needed
+  row_labels <- c(
+    # LPM section
+    "LPM Model:",
+    tracked_var_display[1],  # Punter variable
+    tracked_var_display[2],  # Kicker variable
+    "Sample Size",
+    "Controls:",
+    "Game Situation",
+    "Environmental",
+    "Coach Variables",
+    "Team Stats",
+    "Player Variables",
+    "Player Presence",
+    "Season/Team FE",
+    "Coach FE",
+    # Separator
+    "",
+    # Probit section
+    "Probit Model:",
+    tracked_var_display[1],
+    tracked_var_display[2],
+    # Separator
+    "",
+    # Logit section
+    "Logit Model:",
+    tracked_var_display[1],
+    tracked_var_display[2]
+  )
+  
+  # Add row labels to the data frame
+  df$Variable <- row_labels
+  
+  # Format t-values with significance stars
+  format_tval <- function(t_val) {
+    # Check for NA, NULL, or non-numeric values
+    if (is.null(t_val) || !is.numeric(t_val) || is.na(t_val)) {
+      return("---")
+    }
+    
+    # Ensure t_val is numeric
+    t_val <- as.numeric(t_val)
+    
+    # Calculate p-value
+    p_val <- 2 * (1 - pnorm(abs(t_val)))
+    
+    # Add significance stars
+    stars <- ifelse(p_val < 0.01, "***",
+             ifelse(p_val < 0.05, "**",
+             ifelse(p_val < 0.1, "*",
+             ifelse(p_val < 0.15, ".", ""))))
+    
+    return(sprintf("%.2f%s", t_val, stars))
+  }
+  
+  # Add columns for each yardline range
+  for (yl in 1:length(yardline_ranges)) {
+    yardline <- yardline_ranges[yl]
+    lpm_results <- dataset_results[["lpm"]][[yl]]
+    probit_results <- dataset_results[["probit"]][[yl]]
+    logit_results <- dataset_results[["logit"]][[yl]]
+    
+    # Create a column for this yardline range
+    col_values <- c(
+      # LPM section
+      "",  # LPM header
+      format_tval(lpm_results["punter"]),  # Punter t-value
+      format_tval(lpm_results["kicker"]),  # Kicker t-value
+      ifelse(lpm_results["n"] > 0, format(lpm_results["n"], big.mark = ","), "---"),  # Sample size
+      "",  # Controls header
+      "Yes",  # Game Situation
+      "Yes",  # Environmental
+      "Yes",  # Coach Variables
+      "Yes",  # Team Stats
+      "Yes",  # Player Variables
+      ifelse(grepl("Attempt", col), "No", "Yes"),  # Player Presence - Yes for On-Field/Starter, No for Attempt
+      "Yes",  # Season/Team FE
+      "No",   # Coach FE
+      "",     # Separator
+      "",     # Probit header
+      format_tval(probit_results["punter"]),  # Probit Punter t-value
+      format_tval(probit_results["kicker"]),  # Probit Kicker t-value
+      "",     # Separator
+      "",     # Logit header
+      format_tval(logit_results["punter"]),   # Logit Punter t-value
+      format_tval(logit_results["kicker"])    # Logit Kicker t-value
+    )
+    
+    # Add the column to the data frame
+    df[[yardline]] <- col_values
+  }
+  
+  # Define which rows should be bold and italic
+  bold_rows <- c(1, 4, 5, 15, 19)  # Headers and sample size
+  italic_rows <- c(1, 5, 15, 19)   # Headers only
+  
+  # Define which rows should be indented
+  indented_rows <- c(2:3, 6:13, 16:17, 20:21)  # Variables and controls
+  
+  # Create the table with kableExtra
+  kable(df,
+        format = "latex",
+        booktabs = TRUE,
+        caption = paste0("Results for ", dataset_name),
+        col.names = c("Variable", yardline_ranges),
+        align = c("l", rep("c", length(yardline_ranges))),
+        escape = TRUE) %>%
+    kable_styling(
+      latex_options = c("striped", "hold_position"),
+      font_size = 7
+    ) %>%
+    row_spec(bold_rows, bold = TRUE) %>%
+    row_spec(italic_rows, italic = TRUE) %>%
+    add_indent(indented_rows) %>%
+    pack_rows("LPM", 1, 13, label_row_css = "border-top: 2px solid; border-bottom: 1px solid", 
+              latex_gap_space = "0.6em", bold = TRUE) %>%
+    pack_rows("Probit", 15, 17, label_row_css = "border-top: 1px solid; border-bottom: 1px solid", 
+              latex_gap_space = "0.6em", bold = TRUE) %>%
+    pack_rows("Logit", 19, 21, label_row_css = "border-top: 1px solid; border-bottom: 2px solid", 
+              latex_gap_space = "0.6em", bold = TRUE) %>%
+    footnote(
+      general = c(
+        "Values shown are t-statistics from respective model regressions with conversion as the dependent variable",
+        "Significance codes: *** p<0.01, ** p<0.05, * p<0.1, . p<0.15"
+      ),
+      threeparttable = TRUE,
+      footnote_as_chunk = TRUE
+    )
+}
+
+# Print a table for each dataset
+cat("# Offensive Datasets\n\n")
+
+cat("## Offensive Grades\n\n")
+create_dataset_table(1)
+
+cat("\n\n## Offensive Yards\n\n")
+create_dataset_table(2)
+
+cat("\n\n## Offensive Completions\n\n")
+create_dataset_table(3)
+
+cat("\n\n# Defensive Datasets\n\n")
+
+cat("## Defensive Stops\n\n")
+create_dataset_table(4)
+
+cat("\n\n## Defensive Tackles\n\n")
+create_dataset_table(5)
+
+cat("\n\n## Defensive Grades\n\n")
+create_dataset_table(6)
+```

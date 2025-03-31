@@ -1,0 +1,578 @@
+---
+title: "Summary Stats All"
+header-includes:
+  - \usepackage{geometry}
+  - \usepackage{pdflscape}
+  - \usepackage{booktabs}
+  - \usepackage{array}
+  - \usepackage{threeparttable}
+  - \usepackage{siunitx}
+output: 
+  pdf_document:
+    latex_engine: xelatex
+    includes:
+      in_header: "preamble.tex"
+date: "2025-03-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+library(data.table)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(tools)
+
+# Options for better output
+options(max.print=10000)
+options(knitr.kable.NA = '')
+```
+
+```{r transform_function}
+# Column Name Transformer for Football Analytics with individual OL positions
+transform_column_names <- function(df) {
+  # Position mapping with individual OL positions
+  offense_positions <- c(
+    # QB slots (1-3)
+    "1" = "QB", "2" = "QB2", "3" = "QB3",
+    # Backs slots (4-7)
+    "4" = "RB", "5" = "RB2", "6" = "FB", "7" = "FB2",
+    # Wide receivers slots (8-13)
+    "8" = "WR1", "9" = "WR2", "10" = "WR3", "11" = "WR4", "12" = "WR5", "13" = "WR6",
+    # Tight ends slots (14-16)
+    "14" = "TE1", "15" = "TE2", "16" = "TE3",
+    # Offensive line slots (17-24) - now with unique identifiers
+    "17" = "OL1", "18" = "OL2", "19" = "OL3", "20" = "OL4", "21" = "OL5", 
+    "22" = "OL6", "23" = "OL7", "24" = "OL8"
+  )
+  
+  defense_positions <- c(
+    # Defensive line slots (1-8)
+    "1" = "DL1", "2" = "DL2", "3" = "DL3", "4" = "DL4", 
+    "5" = "DL5", "6" = "DL6", "7" = "DL7", "8" = "DL8",
+    # Linebackers slots (9-14)
+    "9" = "LB1", "10" = "LB2", "11" = "LB3", "12" = "LB4", 
+    "13" = "LB5", "14" = "LB6",
+    # Cornerbacks slots (15-19)
+    "15" = "CB1", "16" = "CB2", "17" = "CB3", "18" = "CB4", "19" = "CB5",
+    # Safeties slots (20-23)
+    "20" = "S1", "21" = "S2", "22" = "S3", "23" = "S4"
+  )
+  
+  # Get column names
+  cols <- colnames(df)
+  new_cols <- cols
+  
+  for (i in seq_along(cols)) {
+    col <- cols[i]
+    
+    # Handle offense player patterns
+    if (grepl("offense_player_", col)) {
+      player_num <- gsub(".*offense_player_([0-9\\-]+).*", "\\1", col)
+      
+      # Determine position
+      if (grepl("-", player_num)) {
+        # Handle OL range notation if present (e.g., "17-21")
+        # Extract the range and assign appropriate OL position
+        range_parts <- strsplit(player_num, "-")[[1]]
+        if (length(range_parts) == 2) {
+          start_num <- as.numeric(range_parts[1])
+          if (start_num >= 17 && start_num <= 24) {
+            position <- paste0("OL", start_num - 16)  # Convert slot to OL position number
+          } else {
+            position <- paste0("OFF", player_num)
+          }
+        } else {
+          position <- paste0("OFF", player_num)
+        }
+      } else if (player_num %in% names(offense_positions)) {
+        position <- offense_positions[player_num]
+      } else {
+        position <- paste0("OFF", player_num)
+      }
+      
+      # Replace pattern and remove first two words after
+      if (grepl("^starter_", col)) {
+        parts <- strsplit(gsub("starter_offense_player_[0-9\\-]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste("starter", position, paste(parts, collapse = "_"), sep = "_")
+      } else {
+        parts <- strsplit(gsub("offense_player_[0-9\\-]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste(position, paste(parts, collapse = "_"), sep = "_")
+      }
+    }
+    
+    # Handle defense player patterns
+    else if (grepl("defense_player_", col)) {
+      player_num <- gsub(".*defense_player_([0-9]+).*", "\\1", col)
+      
+      # Determine position
+      if (player_num %in% names(defense_positions)) {
+        position <- defense_positions[player_num]
+      } else {
+        position <- paste0("DEF", player_num)
+      }
+      
+      # Replace pattern and remove first two words after
+      if (grepl("^starter_", col)) {
+        parts <- strsplit(gsub("starter_defense_player_[0-9]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste("starter", position, paste(parts, collapse = "_"), sep = "_")
+      } else {
+        parts <- strsplit(gsub("defense_player_[0-9]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste(position, paste(parts, collapse = "_"), sep = "_")
+      }
+    }
+  }
+  
+  # Set the new column names
+  colnames(df) <- new_cols
+  return(df)
+}
+```
+
+```{r load_data}
+# Manually load only the 4 datasets specifically for grades (offensive and defensive)
+
+# 1. Load offensive grades outcome data
+off_grades_outcome <- fread("unstandardized_processed_predict_ccafd_off_grades.csv.csv.gz")
+# Apply transformation to column names
+off_grades_outcome <- transform_column_names(off_grades_outcome)
+
+# 2. Load offensive grades select data
+off_grades_select <- fread("unstandardized_processed_predict_ccfd_off_grades.csv.csv.gz")
+# Apply transformation to column names
+off_grades_select <- transform_column_names(off_grades_select)
+
+# 3. Load defensive grades outcome data
+def_grades_outcome <- fread("unstandardized_processed_predict_ccafd_def_grades.csv.csv.gz")
+# Apply transformation to column names
+def_grades_outcome <- transform_column_names(def_grades_outcome)
+
+# 4. Load defensive grades select data
+def_grades_select <- fread("unstandardized_processed_predict_ccfd_def_grades.csv.csv.gz")
+# Apply transformation to column names
+def_grades_select <- transform_column_names(def_grades_select)
+```
+
+```{r print_data}
+# #print the colnames and str of all 4 data sets
+# print(colnames(off_grades_outcome))
+# print(str(off_grades_outcome))
+# print(colnames(off_grades_select))
+# print(str(off_grades_select))
+# print(colnames(def_grades_outcome))
+# print(str(def_grades_outcome))
+# print(colnames(def_grades_select))
+# print(str(def_grades_select))
+```
+
+```{r advanced_summaries, results='asis'}
+library(kableExtra)
+library(dplyr)
+library(data.table)
+options(knitr.kable.NA = '')
+
+# Function to create a three-section table with outcome (regular + starter) and select data
+create_three_section_table <- function(outcome_data, select_data, position_patterns, title) {
+  # Initialize results with row names for all three sections
+  stat_names <- c("Min (ex. 0)", "Max", "Zero Count", "5th Percentile", "Median", "Mean", "95th Percentile", "SD")
+  
+  # Create empty dataframe for results with divider rows
+  results <- data.frame(Statistic = c(
+    stat_names,                   # Regular outcome section (rows 1-8)
+    "STARTER_DIVIDER",            # Divider row (row 9)
+    stat_names,                   # Starter outcome section (rows 10-17)
+    "SELECT_DIVIDER",             # Divider row for select data (row 18)
+    stat_names                    # Select data section (rows 19-26)
+  ))
+  
+  # Extract and process columns
+  for(pos in names(position_patterns)) {
+    # Regular pattern for outcome data
+    reg_pattern <- position_patterns[[pos]]
+    reg_cols <- grep(reg_pattern, colnames(outcome_data), value=TRUE)
+    
+    # Starter pattern for outcome data
+    starter_pattern <- gsub("^\\^", "^starter_", reg_pattern)
+    starter_cols_outcome <- grep(starter_pattern, colnames(outcome_data), value=TRUE)
+    
+    # Starter pattern for select data
+    starter_cols_select <- grep(starter_pattern, colnames(select_data), value=TRUE)
+    
+    # If no columns exist at all, skip this position
+    if(length(reg_cols) == 0 && length(starter_cols_outcome) == 0 && length(starter_cols_select) == 0) next
+    
+    # Initialize column with NAs
+    results[[pos]] <- NA
+    
+    # 1. Process regular outcome columns if they exist
+    if(length(reg_cols) > 0) {
+      col_data <- outcome_data[[reg_cols[1]]]
+      non_zero_values <- col_data[col_data != 0]
+      zero_count <- sum(col_data == 0, na.rm=TRUE)
+      
+      col_stats <- c(
+        if(length(non_zero_values) > 0) min(non_zero_values, na.rm=TRUE) else NA,
+        max(col_data, na.rm=TRUE),
+        zero_count,
+        if(length(non_zero_values) > 0) quantile(non_zero_values, 0.05, na.rm=TRUE) else NA,
+        median(col_data, na.rm=TRUE),
+        mean(col_data, na.rm=TRUE),
+        if(length(non_zero_values) > 0) quantile(non_zero_values, 0.95, na.rm=TRUE) else NA,
+        sd(col_data, na.rm=TRUE)
+      )
+      
+      # Add regular stats to first 8 rows
+      results[1:8, pos] <- col_stats
+    }
+    
+    # Add first divider row (will be formatted later)
+    results[9, pos] <- NA
+    
+    # 2. Process starter outcome columns if they exist
+    if(length(starter_cols_outcome) > 0) {
+      col_data <- outcome_data[[starter_cols_outcome[1]]]
+      non_zero_values <- col_data[col_data != 0]
+      zero_count <- sum(col_data == 0, na.rm=TRUE)
+      
+      col_stats <- c(
+        if(length(non_zero_values) > 0) min(non_zero_values, na.rm=TRUE) else NA,
+        max(col_data, na.rm=TRUE),
+        zero_count,
+        if(length(non_zero_values) > 0) quantile(non_zero_values, 0.05, na.rm=TRUE) else NA,
+        median(col_data, na.rm=TRUE),
+        mean(col_data, na.rm=TRUE),
+        if(length(non_zero_values) > 0) quantile(non_zero_values, 0.95, na.rm=TRUE) else NA,
+        sd(col_data, na.rm=TRUE)
+      )
+      
+      # Add starter outcome stats to rows 10-17
+      results[10:17, pos] <- col_stats
+    }
+    
+    # Add second divider row (will be formatted later)
+    results[18, pos] <- NA
+    
+    # 3. Process select data columns if they exist
+    if(length(starter_cols_select) > 0) {
+      col_data <- select_data[[starter_cols_select[1]]]
+      non_zero_values <- col_data[col_data != 0]
+      zero_count <- sum(col_data == 0, na.rm=TRUE)
+      
+      col_stats <- c(
+        if(length(non_zero_values) > 0) min(non_zero_values, na.rm=TRUE) else NA,
+        max(col_data, na.rm=TRUE),
+        zero_count,
+        if(length(non_zero_values) > 0) quantile(non_zero_values, 0.05, na.rm=TRUE) else NA,
+        median(col_data, na.rm=TRUE),
+        mean(col_data, na.rm=TRUE),
+        if(length(non_zero_values) > 0) quantile(non_zero_values, 0.95, na.rm=TRUE) else NA,
+        sd(col_data, na.rm=TRUE)
+      )
+      
+      # Add select data stats to rows 19-26
+      results[19:26, pos] <- col_stats
+    }
+  }
+  
+  # Format the table title with data dimensions
+  dimensions_text <- paste0(
+    title, 
+    "\nOutcome Data: ", nrow(outcome_data), " observations × ", ncol(outcome_data), " variables, ",
+    "Select Data: ", nrow(select_data), " observations × ", ncol(select_data), " variables"
+  )
+  
+  # Create kable table
+  kbl <- kable(results,
+        caption = dimensions_text,
+        format = "latex",
+        booktabs = TRUE,
+        digits = 0,
+        linesep = "",
+        align = c('l', rep('c', ncol(results)-1))) %>%
+    kable_styling(latex_options = c("striped", "scale_down", "condensed"), 
+                  font_size = 6,
+                  position = "center",
+                  full_width = FALSE) %>%
+    column_spec(1, bold = TRUE, width = "1.5cm") %>%
+    column_spec(2:ncol(results), width = "0.4cm") %>%
+    add_header_above(c(" " = 1, "Player Skill Metrics" = ncol(results) - 1)) %>%
+    row_spec(0, angle = 60, bold = TRUE)
+  
+  # Format the divider rows
+  kbl <- kbl %>%
+    row_spec(9, extra_latex_after = "\\midrule \\multicolumn{1}{l}{\\textbf{Starter Players}} \\\\") %>%
+    row_spec(9, hline_after = TRUE, bold = TRUE, color = "white") %>%
+    row_spec(18, extra_latex_after = "\\midrule \\multicolumn{1}{l}{\\textbf{Select Data (Starter Only)}} \\\\") %>%
+    row_spec(18, hline_after = TRUE, bold = TRUE, color = "white")
+  
+  # Return the formatted table
+  return(kbl)
+}
+
+# Updated patterns with shorter display names
+off_patterns <- list(
+  "QB Short" = "^QB_short_grades_pass_12w$",
+  "QB Med" = "^QB_medium_grades_pass_12w$",
+  "QB Deep" = "^QB_deep_grades_pass_12w$",
+  
+  "RB Pass Blk" = "^RB_grades_pass_block_12w$",
+  "RB Run" = "^RB_grades_run_12w$",
+  "RB Short Rt" = "^RB_short_grades_pass_route_12w$",
+  "RB Med Rt" = "^RB_medium_grades_pass_route_12w$",
+  "RB Deep Rt" = "^RB_deep_grades_pass_route_12w$",
+  
+  "WR1 Run Blk" = "^WR1_grades_run_block_12w$",
+  "WR1 Short Rt" = "^WR1_short_grades_pass_route_12w$",
+  "WR1 Med Rt" = "^WR1_medium_grades_pass_route_12w$",
+  "WR1 Deep Rt" = "^WR1_deep_grades_pass_route_12w$",
+  
+  "WR2 Run Blk" = "^WR2_grades_run_block_12w$",
+  "WR2 Short Rt" = "^WR2_short_grades_pass_route_12w$",
+  "WR2 Med Rt" = "^WR2_medium_grades_pass_route_12w$",
+  "WR2 Deep Rt" = "^WR2_deep_grades_pass_route_12w$",
+  
+  "WR3 Run Blk" = "^WR3_grades_run_block_12w$",
+  "WR3 Short Rt" = "^WR3_short_grades_pass_route_12w$",
+  "WR3 Med Rt" = "^WR3_medium_grades_pass_route_12w$",
+  "WR3 Deep Rt" = "^WR3_deep_grades_pass_route_12w$",
+  
+  "TE1 Pass Blk" = "^TE1_grades_pass_block_12w$",
+  "TE1 Run Blk" = "^TE1_grades_run_block_12w$",
+  "TE1 Short Rt" = "^TE1_short_grades_pass_route_12w$",
+  "TE1 Med Rt" = "^TE1_medium_grades_pass_route_12w$",
+  "TE1 Deep Rt" = "^TE1_deep_grades_pass_route_12w$",
+  
+  "OL1 Pass Blk" = "^OL1_grades_pass_block_12w$",
+  "OL1 Run Blk" = "^OL1_grades_run_block_12w$",
+  "OL2 Pass Blk" = "^OL2_grades_pass_block_12w$",
+  "OL2 Run Blk" = "^OL2_grades_run_block_12w$",
+  "OL3 Pass Blk" = "^OL3_grades_pass_block_12w$",
+  "OL3 Run Blk" = "^OL3_grades_run_block_12w$",
+  "OL4 Pass Blk" = "^OL4_grades_pass_block_12w$",
+  "OL4 Run Blk" = "^OL4_grades_run_block_12w$",
+  "OL5 Pass Blk" = "^OL5_grades_pass_block_12w$",
+  "OL5 Run Blk" = "^OL5_grades_run_block_12w$"
+)
+
+# For defensive players - more specific column patterns
+def_patterns <- list(
+  "DL1 Run Def" = "^DL1_grades_run_defense_12w$",
+  "DL1 Pass Rush" = "^DL1_grades_pass_rush_defense_12w$",
+  "DL2 Run Def" = "^DL2_grades_run_defense_12w$",
+  "DL2 Pass Rush" = "^DL2_grades_pass_rush_defense_12w$",
+  "DL3 Run Def" = "^DL3_grades_run_defense_12w$",
+  "DL3 Pass Rush" = "^DL3_grades_pass_rush_defense_12w$",
+  "DL4 Run Def" = "^DL4_grades_run_defense_12w$",
+  "DL4 Pass Rush" = "^DL4_grades_pass_rush_defense_12w$",
+  
+  "LB1 Run Def" = "^LB1_grades_run_defense_12w$",
+  "LB1 Man Cov" = "^LB1_man_grades_coverage_defense_12w$",
+  "LB1 Zone Cov" = "^LB1_zone_grades_coverage_defense_12w$",
+  "LB2 Run Def" = "^LB2_grades_run_defense_12w$",
+  "LB2 Man Cov" = "^LB2_man_grades_coverage_defense_12w$",
+  "LB2 Zone Cov" = "^LB2_zone_grades_coverage_defense_12w$",
+  "LB3 Run Def" = "^LB3_grades_run_defense_12w$",
+  "LB3 Man Cov" = "^LB3_man_grades_coverage_defense_12w$",
+  "LB3 Zone Cov" = "^LB3_zone_grades_coverage_defense_12w$",
+  "LB4 Run Def" = "^LB4_grades_run_defense_12w$",
+  "LB4 Man Cov" = "^LB4_man_grades_coverage_defense_12w$",
+  "LB4 Zone Cov" = "^LB4_zone_grades_coverage_defense_12w$",
+  
+  "CB1 Run Def" = "^CB1_grades_run_defense_12w$",
+  "CB1 Man Cov" = "^CB1_man_grades_coverage_defense_12w$",
+  "CB1 Zone Cov" = "^CB1_zone_grades_coverage_defense_12w$",
+  "CB2 Run Def" = "^CB2_grades_run_defense_12w$",
+  "CB2 Man Cov" = "^CB2_man_grades_coverage_defense_12w$",
+  "CB2 Zone Cov" = "^CB2_zone_grades_coverage_defense_12w$",
+  "CB3 Run Def" = "^CB3_grades_run_defense_12w$",
+  "CB3 Man Cov" = "^CB3_man_grades_coverage_defense_12w$",
+  "CB3 Zone Cov" = "^CB3_zone_grades_coverage_defense_12w$",
+  
+  "S1 Run Def" = "^S1_grades_run_defense_12w$",
+  "S1 Man Cov" = "^S1_man_grades_coverage_defense_12w$",
+  "S1 Zone Cov" = "^S1_zone_grades_coverage_defense_12w$",
+  "S2 Run Def" = "^S2_grades_run_defense_12w$",
+  "S2 Man Cov" = "^S2_man_grades_coverage_defense_12w$",
+  "S2 Zone Cov" = "^S2_zone_grades_coverage_defense_12w$",
+  "S3 Run Def" = "^S3_grades_run_defense_12w$",
+  "S3 Man Cov" = "^S3_man_grades_coverage_defense_12w$",
+  "S3 Zone Cov" = "^S3_zone_grades_coverage_defense_12w$"
+)
+
+# Create the two three-section tables
+cat("\\section*{Player Performance Metrics Tables}\n")
+cat("\\vspace{0.5cm}\n")
+
+# 1. Offensive table with three sections
+create_three_section_table(off_grades_outcome, off_grades_select, off_patterns, 
+                          "Offensive Player Grades Summary Statistics")
+
+# Add space between tables
+cat("\\vspace{2cm}\n")
+cat("\\pagebreak\n")
+
+# 2. Defensive table with three sections
+create_three_section_table(def_grades_outcome, def_grades_select, def_patterns,
+                          "Defensive Player Grades Summary Statistics")
+```
+
+```{r game_metrics_summary, results='asis'}
+library(kableExtra)
+library(dplyr)
+library(data.table)
+options(knitr.kable.NA = '')
+
+# Function to create a summary table for game situation metrics
+create_game_metrics_table <- function(outcome_data, select_data) {
+  # Define the metrics to analyze
+  # For each metric, specify the column name and whether it exists in outcome/select
+  metrics <- list(
+    list(name = "Conversion", col = "conversion", in_outcome = TRUE, in_select = FALSE),
+    list(name = "Attempt", col = "attempt", in_outcome = FALSE, in_select = TRUE),
+    list(name = "Yards To Go", col = "ydstogo", in_outcome = TRUE, in_select = TRUE),
+    list(name = "Temperature", col = "temp", in_outcome = TRUE, in_select = TRUE),
+    list(name = "Wind", col = "wind", in_outcome = TRUE, in_select = TRUE),
+    list(name = "Vegas Win Prob", col = "vegas_wp", in_outcome = TRUE, in_select = TRUE),
+    list(name = "Spread Line", col = "spread_line", in_outcome = TRUE, in_select = TRUE),
+    list(name = "Total Line", col = "total_line", in_outcome = TRUE, in_select = TRUE),
+    list(name = "Punter Grade", col = "p_player_26_punting_grades_grades_punter_12w", 
+         in_outcome = FALSE, in_select = TRUE),
+    list(name = "Kicker Grade", col = "k_player_25_field_goals_grades_grades_fgep_kicker_12w", 
+         in_outcome = FALSE, in_select = TRUE)
+  )
+  
+  # Initialize results with row names
+  stat_names <- c("Min", "Max", "Mean", "Median", "SD", "Zero Count", "5th Percentile", "95th Percentile")
+  
+  # Create empty dataframe for results with divider row
+  results <- data.frame(Statistic = c(stat_names, "SELECT_DIVIDER", stat_names))
+  
+  # Process each metric
+  for(metric in metrics) {
+    # Skip if column doesn't exist in either dataset
+    if((!metric$in_outcome || !(metric$col %in% colnames(outcome_data))) && 
+       (!metric$in_select || !(metric$col %in% colnames(select_data)))) next
+    
+    # Initialize column with NAs
+    results[[metric$name]] <- NA
+    
+    # Process outcome data if column exists
+    if(metric$in_outcome && metric$col %in% colnames(outcome_data)) {
+      col_data <- outcome_data[[metric$col]]
+      if(is.numeric(col_data)) {
+        zero_count <- sum(col_data == 0, na.rm=TRUE)
+        non_zero_values <- col_data[col_data != 0]
+        
+        # Pre-round all statistics to 1 decimal place
+        col_stats <- c(
+          round(min(col_data, na.rm=TRUE), 1),
+          round(max(col_data, na.rm=TRUE), 1),
+          round(mean(col_data, na.rm=TRUE), 1),
+          round(median(col_data, na.rm=TRUE), 1),
+          round(sd(col_data, na.rm=TRUE), 1),
+          round(zero_count, 1),
+          if(length(non_zero_values) > 0) round(quantile(col_data, 0.05, na.rm=TRUE), 1) else NA,
+          if(length(non_zero_values) > 0) round(quantile(col_data, 0.95, na.rm=TRUE), 1) else NA
+        )
+        
+        # Add stats to first section
+        results[1:8, metric$name] <- col_stats
+      } else {
+        # For non-numeric columns, just show counts or proportion of most common value
+        if(is.factor(col_data) || is.character(col_data)) {
+          results[1, metric$name] <- "Categorical"
+          results[2, metric$name] <- paste0("Most common: ", names(sort(table(col_data), decreasing=TRUE)[1]))
+          results[3, metric$name] <- paste0("Prop: ", round(max(table(col_data))/length(col_data), 1))
+        }
+      }
+    } else {
+      # Column doesn't exist in outcome
+      results[1, metric$name] <- "Not in outcome"
+    }
+    
+    # Add divider row
+    results[9, metric$name] <- NA
+    
+    # Process select data if column exists
+    if(metric$in_select && metric$col %in% colnames(select_data)) {
+      col_data <- select_data[[metric$col]]
+      if(is.numeric(col_data)) {
+        zero_count <- sum(col_data == 0, na.rm=TRUE)
+        non_zero_values <- col_data[col_data != 0]
+        
+        # Pre-round all statistics to 1 decimal place
+        col_stats <- c(
+          round(min(col_data, na.rm=TRUE), 1),
+          round(max(col_data, na.rm=TRUE), 1),
+          round(mean(col_data, na.rm=TRUE), 1),
+          round(median(col_data, na.rm=TRUE), 1),
+          round(sd(col_data, na.rm=TRUE), 1),
+          round(zero_count, 1),
+          if(length(non_zero_values) > 0) round(quantile(col_data, 0.05, na.rm=TRUE), 1) else NA,
+          if(length(non_zero_values) > 0) round(quantile(col_data, 0.95, na.rm=TRUE), 1) else NA
+        )
+        
+        # Add stats to second section
+        results[10:17, metric$name] <- col_stats
+      } else {
+        # For non-numeric columns, just show counts or proportion of most common value
+        if(is.factor(col_data) || is.character(col_data)) {
+          results[10, metric$name] <- "Categorical"
+          results[11, metric$name] <- paste0("Most common: ", names(sort(table(col_data), decreasing=TRUE)[1]))
+          results[12, metric$name] <- paste0("Prop: ", round(max(table(col_data))/length(col_data), 1))
+        }
+      }
+    } else {
+      # Column doesn't exist in select
+      results[10, metric$name] <- "Not in select"
+    }
+  }
+  
+  # Format table title with data dimensions
+  dimensions_text <- paste0(
+    "Game Situation Metrics Summary Statistics\n",
+    "Outcome Data: ", nrow(outcome_data), " observations × ", ncol(outcome_data), " variables, ",
+    "Select Data: ", nrow(select_data), " observations × ", ncol(select_data), " variables"
+  )
+  
+  # Create kable table - digits=1 ensures display is also consistent
+  kbl <- kable(results,
+        caption = dimensions_text,
+        format = "latex",
+        booktabs = TRUE,
+        digits = 1,
+        linesep = "",
+        align = c('l', rep('c', ncol(results)-1))) %>%
+    kable_styling(latex_options = c("striped", "scale_down", "condensed"), 
+                  font_size = 6,
+                  position = "center",
+                  full_width = FALSE) %>%
+    column_spec(1, bold = TRUE, width = "1.5cm") %>%
+    column_spec(2:ncol(results), width = "0.8cm") %>%
+    add_header_above(c(" " = 1, "Game Situation Metrics" = ncol(results) - 1)) %>%
+    row_spec(0, angle = 45, bold = TRUE)
+  
+  # Format the divider row
+  kbl <- kbl %>%
+    row_spec(9, extra_latex_after = "\\midrule \\multicolumn{1}{l}{\\textbf{Select Data}} \\\\") %>%
+    row_spec(9, hline_after = TRUE, bold = TRUE, color = "white")
+  
+  # Return the formatted table
+  return(kbl)
+}
+
+# Create game metrics table
+create_game_metrics_table(def_grades_outcome, def_grades_select)
+```

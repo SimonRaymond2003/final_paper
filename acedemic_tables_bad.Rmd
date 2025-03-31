@@ -1,0 +1,572 @@
+---
+title: "Academic Tables for NFL Player Performance Models"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+date: "2025-03-23"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+library(knitr)
+library(kableExtra)
+library(dplyr)
+options(knitr.kable.NA = '')
+knitr::opts_chunk$set(comment = NA)
+```
+
+```{r load_matrices2, warning=FALSE, message=FALSE}
+# Load all the matrices2 from CSVs
+# Load all the matrices2 from CSVs
+# For T-values (needed for significance stars)
+off_grades_tval <- read.csv("matrices2/off_grades_tval.csv", row.names = 1)
+off_yards_tval <- read.csv("matrices2/off_yards_tval.csv", row.names = 1)
+off_completions_tval <- read.csv("matrices2/off_completions_tval.csv", row.names = 1)
+def_stops_tval <- read.csv("matrices2/def_stops_tval.csv", row.names = 1)
+def_grades_tval <- read.csv("matrices2/def_grades_tval.csv", row.names = 1)
+def_tackles_tval <- read.csv("matrices2/def_tackles_tval.csv", row.names = 1)
+
+# For Standard Errors (to show in brackets)
+off_grades_se <- read.csv("matrices2/off_grades_se.csv", row.names = 1)
+off_yards_se <- read.csv("matrices2/off_yards_se.csv", row.names = 1)
+off_completions_se <- read.csv("matrices2/off_completions_se.csv", row.names = 1)
+def_stops_se <- read.csv("matrices2/def_stops_se.csv", row.names = 1)
+def_grades_se <- read.csv("matrices2/def_grades_se.csv", row.names = 1)
+def_tackles_se <- read.csv("matrices2/def_tackles_se.csv", row.names = 1)
+
+# For Marginal Effects
+off_grades_mfx <- read.csv("matrices2/off_grades_mfx.csv", row.names = 1)
+off_yards_mfx <- read.csv("matrices2/off_yards_mfx.csv", row.names = 1)
+off_completions_mfx <- read.csv("matrices2/off_completions_mfx.csv", row.names = 1)
+def_stops_mfx <- read.csv("matrices2/def_stops_mfx.csv", row.names = 1)
+def_grades_mfx <- read.csv("matrices2/def_grades_mfx.csv", row.names = 1)
+def_tackles_mfx <- read.csv("matrices2/def_tackles_mfx.csv", row.names = 1)
+
+# Function to simplify "present" variable names in matrices2 to a standard pattern
+rename_present_variables <- function(matrix) {
+  # Count to keep track of how many we've renamed
+  count <- 0
+  
+  # Get all row names
+  all_row_names <- rownames(matrix)
+  
+  # Check each row name for "present" anywhere in the string (case insensitive)
+  for (i in 1:length(all_row_names)) {
+    row_name <- all_row_names[i]
+    if (grepl("present", row_name, ignore.case = TRUE)) {
+      count <- count + 1
+      # Replace the name with a simple pattern that won't match position prefixes
+      rownames(matrix)[i] <- paste0("PresentVar", count)
+    }
+  }
+  
+  return(matrix)
+}
+
+# Apply the renaming to all matrices2
+off_grades_tval <- rename_present_variables(off_grades_tval)
+off_yards_tval <- rename_present_variables(off_yards_tval)
+off_completions_tval <- rename_present_variables(off_completions_tval)
+def_stops_tval <- rename_present_variables(def_stops_tval)
+def_grades_tval <- rename_present_variables(def_grades_tval)
+def_tackles_tval <- rename_present_variables(def_tackles_tval)
+
+off_grades_mfx <- rename_present_variables(off_grades_mfx)
+off_yards_mfx <- rename_present_variables(off_yards_mfx)
+off_completions_mfx <- rename_present_variables(off_completions_mfx)
+def_stops_mfx <- rename_present_variables(def_stops_mfx)
+def_grades_mfx <- rename_present_variables(def_grades_mfx)
+def_tackles_mfx <- rename_present_variables(def_tackles_mfx)
+```
+
+
+
+```{r rename_columns, warning=FALSE, message=FALSE}
+# Rename columns to replace dots with spaces to match what the code is looking for
+rename_columns <- function(df) {
+  colnames(df) <- gsub("\\.", " ", colnames(df))
+  # Also rename OLS to LPM and Player to On-Field in column names
+  colnames(df) <- gsub("OLS", "LPM", colnames(df))
+  colnames(df) <- gsub("Player", "On-Field", colnames(df))
+  return(df)
+}
+
+# Apply the column rename to all matrices2
+off_grades_tval <- rename_columns(off_grades_tval)
+off_yards_tval <- rename_columns(off_yards_tval)
+off_completions_tval <- rename_columns(off_completions_tval)
+def_stops_tval <- rename_columns(def_stops_tval)
+def_grades_tval <- rename_columns(def_grades_tval)
+def_tackles_tval <- rename_columns(def_tackles_tval)
+
+off_grades_mfx <- rename_columns(off_grades_mfx)
+off_yards_mfx <- rename_columns(off_yards_mfx)
+off_completions_mfx <- rename_columns(off_completions_mfx)
+def_stops_mfx <- rename_columns(def_stops_mfx)
+def_grades_mfx <- rename_columns(def_grades_mfx)
+def_tackles_mfx <- rename_columns(def_tackles_mfx)
+```
+
+```{r, results='asis', echo=FALSE, message=FALSE, warning=FALSE}
+options(knitr.table.format = "latex")
+
+# Function to format marginal effects with standard errors in brackets and significance stars
+format_me_se <- function(me, se, digits = 3) {
+  # Handle NA values
+  if (is.na(me) || is.na(se)) {
+    return("")
+  }
+  
+  # Calculate t-value for significance stars
+  tval = me/se
+  
+  # Determine significance stars
+  stars <- ""
+  if (abs(tval) > 2.58) stars <- "***"
+  else if (abs(tval) > 1.96) stars <- "**"
+  else if (abs(tval) > 1.645) stars <- "*"
+  
+  # Format the output with the marginal effect, standard error in brackets, and stars
+  me_str <- sprintf("%0.3f", me)
+  se_str <- sprintf("(%0.3f)", se)
+  
+  formatted <- paste0(me_str, se_str, stars)
+  return(formatted)
+}
+
+# Function to clean variable names for display
+clean_var_name <- function(var_name, position = NULL) {
+  # Remove position prefix if it matches the position group
+  if (!is.null(position) && grepl(paste0("^", position, "_"), var_name)) {
+    var_name <- sub(paste0("^", position, "_"), "", var_name)
+  }
+  
+  # First convert special terms that need specific capitalization
+  var_name <- gsub("pass block(ing)?", "Pass Blk", var_name, ignore.case = TRUE)
+  var_name <- gsub("run block(ing)?", "Run Blk", var_name, ignore.case = TRUE)
+  var_name <- gsub("coverage defense", "Cov Def", var_name, ignore.case = TRUE)
+  # Handle Pass Rush Defense variations before other substitutions
+  var_name <- gsub("(G|g)rades[_ ]*[Pp]ass[_ ]*[Rr]ush[_ ]*[Dd]efense", "Grds Pass Rush Def", var_name)
+  var_name <- gsub("short pass", "Short Pass", var_name, ignore.case = TRUE)
+  var_name <- gsub("medium pass", "Medium Pass", var_name, ignore.case = TRUE)
+  var_name <- gsub("deep pass", "Deep Pass", var_name, ignore.case = TRUE)
+  
+  # Then handle the grades pattern
+  var_name <- gsub("_grades[_ ]", " Grades ", var_name)
+  
+  # Clean up other patterns
+  var_name <- gsub("_12w", "", var_name)
+  var_name <- gsub("_route", "", var_name)
+  var_name <- gsub("_", " ", var_name)
+  
+  # Replace 'Coverage Defense' pattern wherever it appears
+  var_name <- gsub("Coverage Defense", "Cov Def", var_name)
+  var_name <- gsub("coverage defense", "Cov Def", var_name, ignore.case = TRUE)
+  
+  # Capitalize remaining terms
+  var_name <- gsub("\\bdefense\\b", "Defense", var_name, ignore.case = TRUE)
+  var_name <- gsub("\\brun\\b", "Run", var_name, ignore.case = TRUE)
+  
+  # Ensure first letter of each word is capitalized
+  var_name <- gsub("(^|\\s+)([a-z])", "\\1\\U\\2", var_name, perl = TRUE)
+  
+  # Add LaTeX space only after all other processing
+  var_name <- paste0("\\hspace{1em}", var_name)
+  
+  # Clean up underscores and formatting
+  var_name <- gsub("_", " ", var_name)
+  
+  return(var_name)
+}
+
+# Function to organize player variables by individual position
+organize_player_vars <- function(matrix, is_offense) {
+  all_variables <- rownames(matrix)
+  position_groups <- list()
+  
+  if (is_offense) {
+    # Define offensive position groups
+    position_groups[["QB"]] <- grep("^QB_", all_variables, value = TRUE)
+    position_groups[["RB"]] <- grep("^RB_", all_variables, value = TRUE)
+    position_groups[["WR1"]] <- grep("^WR1_", all_variables, value = TRUE)
+    position_groups[["WR2"]] <- grep("^WR2_", all_variables, value = TRUE)
+    position_groups[["WR3"]] <- grep("^WR3_", all_variables, value = TRUE)
+    position_groups[["TE1"]] <- grep("^TE1_", all_variables, value = TRUE)
+    position_groups[["OL1"]] <- grep("^OL1_", all_variables, value = TRUE)
+    position_groups[["OL2"]] <- grep("^OL2_", all_variables, value = TRUE)
+    position_groups[["OL3"]] <- grep("^OL3_", all_variables, value = TRUE)
+    position_groups[["OL4"]] <- grep("^OL4_", all_variables, value = TRUE)
+    position_groups[["OL5"]] <- grep("^OL5_", all_variables, value = TRUE)
+  } else {
+    # Define defensive position groups individually
+    position_groups[["DL1"]] <- grep("^DL1_", all_variables, value = TRUE)
+    position_groups[["DL2"]] <- grep("^DL2_", all_variables, value = TRUE)
+    position_groups[["DL3"]] <- grep("^DL3_", all_variables, value = TRUE)
+    position_groups[["DL4"]] <- grep("^DL4_", all_variables, value = TRUE)
+    position_groups[["LB1"]] <- grep("^LB1_", all_variables, value = TRUE)
+    position_groups[["LB2"]] <- grep("^LB2_", all_variables, value = TRUE)
+    position_groups[["LB3"]] <- grep("^LB3_", all_variables, value = TRUE)
+    position_groups[["LB4"]] <- grep("^LB4_", all_variables, value = TRUE)
+    position_groups[["CB1"]] <- grep("^CB1_", all_variables, value = TRUE)
+    position_groups[["CB2"]] <- grep("^CB2_", all_variables, value = TRUE)
+    position_groups[["CB3"]] <- grep("^CB3_", all_variables, value = TRUE)
+    position_groups[["S1"]] <- grep("^S1_", all_variables, value = TRUE)
+    position_groups[["S2"]] <- grep("^S2_", all_variables, value = TRUE)
+    position_groups[["S3"]] <- grep("^S3_", all_variables, value = TRUE)
+  }
+  
+  # Add GIMR if present
+  gimr <- grep("GIMR", all_variables, value = TRUE)
+  if (length(gimr) > 0) {
+    position_groups[["Performance"]] <- gimr
+  }
+  
+  return(position_groups)
+}
+
+# Define the datasets
+dataset_names <- c("Offense Grades", "Offense Yards", "Offense Completions", 
+                   "Defense Stops", "Defense Grades", "Defense Tackles")
+
+# Define position display names 
+position_display_names <- list(
+  "QB" = "Quarterbacks",
+  "RB" = "Running Backs",
+  "WR1" = "WR1",
+  "WR2" = "WR2", 
+  "WR3" = "WR3",
+  "TE1" = "TE1",
+  "OL1" = "OL1",
+  "OL2" = "OL2",
+  "OL3" = "OL3",
+  "OL4" = "OL4",
+  "OL5" = "OL5",
+  "DL1" = "DL1",
+  "DL2" = "DL2",
+  "DL3" = "DL3",
+  "DL4" = "DL4",
+  "LB1" = "LB1",
+  "LB2" = "LB2",
+  "LB3" = "LB3",
+  "LB4" = "LB4",
+  "CB1" = "CB1",
+  "CB2" = "CB2",
+  "CB3" = "CB3",
+  "S1" = "S1",
+  "S2" = "S2",
+  "S3" = "S3",
+  "Performance" = "Perf. Measures"
+)
+
+# Control variable categories (excluding player variables which will be handled separately)
+control_categories <- c("Game Situation", "Coach Variables", "Team Stats", "Season/Team FE", "Coach FE", "Player Presence")
+
+# Create academic tables for each dataset
+for (dataset_idx in 1:length(dataset_names)) {
+  dataset_name <- dataset_names[dataset_idx]
+  
+  # Get matrices2 for this dataset
+  if (dataset_name == "Offense Grades") {
+    mfx_matrix <- off_grades_mfx
+    tval_matrix <- off_grades_tval
+    se_matrix <- off_grades_se
+    is_offense <- TRUE
+  } else if (dataset_name == "Offense Yards") {
+    mfx_matrix <- off_yards_mfx
+    tval_matrix <- off_yards_tval
+    se_matrix <- off_yards_se
+    is_offense <- TRUE
+  } else if (dataset_name == "Offense Completions") {
+    mfx_matrix <- off_completions_mfx
+    tval_matrix <- off_completions_tval
+    se_matrix <- off_completions_se
+    is_offense <- TRUE
+  } else if (dataset_name == "Defense Stops") {
+    mfx_matrix <- def_stops_mfx
+    tval_matrix <- def_stops_tval
+    se_matrix <- def_stops_se
+    is_offense <- FALSE
+  } else if (dataset_name == "Defense Grades") {
+    mfx_matrix <- def_grades_mfx
+    tval_matrix <- def_grades_tval
+    se_matrix <- def_grades_se
+    is_offense <- FALSE
+  } else {
+    mfx_matrix <- def_tackles_mfx
+    tval_matrix <- def_tackles_tval
+    se_matrix <- def_tackles_se
+    is_offense <- FALSE
+  }
+  
+  # Organize variables by position groups
+  position_groups <- organize_player_vars(mfx_matrix, is_offense)
+  
+  # Create a data frame for the variables of interest
+  table_data <- data.frame(Variable = character(), stringsAsFactors = FALSE)
+  
+  # Add position group headers and variables
+  row_idx <- 1
+  group_indices <- c()
+  var_rows <- c()
+  
+  for (group_name in names(position_groups)) {
+    if (length(position_groups[[group_name]]) > 0) {
+      # Add position group header
+      display_name <- position_display_names[[group_name]]
+      table_data[row_idx, "Variable"] <- paste0("\\textbf{", display_name, "}")
+      group_indices <- c(group_indices, row_idx)
+      row_idx <- row_idx + 1
+      
+      # Add variables for this group
+      for (var_name in position_groups[[group_name]]) {
+        clean_name <- clean_var_name(var_name, group_name)
+        table_data[row_idx, "Variable"] <- clean_name
+        var_rows <- c(var_rows, row_idx)
+        row_idx <- row_idx + 1
+      }
+    }
+  }
+  
+  # Add formatted marginal effects with standard errors and stars for each model
+  model_cols <- c("On-Field LPM", "On-Field Probit", "On-Field Logit", "Starter LPM", "Starter Probit", "Starter Logit", "Attempt LPM", "Attempt Probit", "Attempt Logit")
+
+  # Initialize columns with empty values
+  for (col in model_cols) {
+    table_data[[col]] <- rep("", nrow(table_data))
+  }
+  
+  # Create a mapping to track which variables belong to which position group
+  row_to_group_map <- list()
+  
+  # Map each row to its position group and original variable name
+  for (i in 1:length(names(position_groups))) {
+    group_name <- names(position_groups)[i]
+    if (length(position_groups[[group_name]]) == 0) next
+    
+    # Find the position group in the table
+    header_row <- which(table_data$Variable == paste0("\\textbf{", position_display_names[[group_name]], "}"))
+    if (length(header_row) == 0) next
+    
+    # Find the next header or end of table
+    if (i < length(names(position_groups))) {
+      next_group <- names(position_groups)[i+1]
+      while (length(position_groups[[next_group]]) == 0 && i+1 < length(names(position_groups))) {
+        i <- i + 1
+        next_group <- names(position_groups)[i+1]
+      }
+      if (length(position_groups[[next_group]]) > 0) {
+        next_header_row <- which(table_data$Variable == paste0("\\textbf{", position_display_names[[next_group]], "}"))
+        if (length(next_header_row) > 0) {
+          rows_in_group <- seq(header_row + 1, next_header_row - 1)
+        } else {
+          rows_in_group <- seq(header_row + 1, nrow(table_data))
+        }
+      } else {
+        rows_in_group <- seq(header_row + 1, nrow(table_data))
+      }
+    } else {
+      rows_in_group <- seq(header_row + 1, nrow(table_data))
+    }
+    
+    # Map variables in this group
+    for (r in rows_in_group) {
+      if (r > nrow(table_data)) break
+      var_display_name <- table_data[r, "Variable"]
+      # Check each variable in this position group
+      for (var_name in position_groups[[group_name]]) {
+        if (clean_var_name(var_name, group_name) == var_display_name) {
+          row_to_group_map[[as.character(r)]] <- list(
+            group = group_name,
+            var_name = var_name
+          )
+          break
+        }
+      }
+    }
+  }
+  
+  # Fill in values for each variable row (skipping headers)
+  for (row_idx in 1:nrow(table_data)) {
+    if (!(row_idx %in% group_indices)) {
+      # Get variable information from our mapping
+      row_key <- as.character(row_idx)
+      var_original <- NULL
+      if (row_key %in% names(row_to_group_map)) {
+        var_original <- row_to_group_map[[row_key]]$var_name
+      }
+      
+      if (!is.null(var_original)) {
+        var_row_idx <- which(rownames(mfx_matrix) == var_original)
+        
+        if (length(var_row_idx) > 0) {
+          for (col in model_cols) {
+            if (col %in% colnames(mfx_matrix)) {
+              col_idx <- which(colnames(mfx_matrix) == col)
+            table_data[row_idx, col] <- format_me_se(mfx_matrix[var_row_idx, col_idx], 
+                                                    se_matrix[var_row_idx, col_idx])
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  # Reorder columns to match desired grouping
+  table_data <- table_data[, c("Variable", "Starter LPM", "Starter Probit", "Starter Logit", "On-Field LPM", "On-Field Probit", "On-Field Logit", "Attempt LPM", "Attempt Probit", "Attempt Logit")]
+  
+  # Add control variables section
+  control_data <- data.frame(
+    Variable = c("\\textbf{Control Variables}"),
+    stringsAsFactors = FALSE
+  )
+  
+  # Add each control variable category
+  for (control_var in control_categories) {
+    control_data[nrow(control_data) + 1, "Variable"] <- control_var
+  }
+  
+  # Add player variable controls as separate rows (abbreviated)
+  if (is_offense) {
+    control_data[nrow(control_data) + 1, "Variable"] <- "Control Def. Players" 
+    control_data[nrow(control_data) + 1, "Variable"] <- "Control Off. Players"
+  } else {
+    control_data[nrow(control_data) + 1, "Variable"] <- "Control Off. Players"
+    control_data[nrow(control_data) + 1, "Variable"] <- "Control Def. Players"
+  }
+  
+  # Fill in control variables for each model type
+  for (col_name in names(table_data)[-1]) {
+    # Initialize with "Yes" for standard controls
+    control_vals <- c("", rep("Yes", length(control_categories)))
+    
+    # Special case for Season/Team FE in Attempt models
+    if (grepl("Attempt", col_name) && "Season/Team FE" %in% control_categories) {
+      season_idx <- which(control_categories == "Season/Team FE")
+      control_vals[season_idx + 1] <- "No"
+    }
+    
+    # Special case for Coach FE in Player and Starter models
+    if (grepl("Player|Starter", col_name) && "Coach FE" %in% control_categories) {
+      coach_idx <- which(control_categories == "Coach FE")
+      control_vals[coach_idx + 1] <- "No"
+    }
+    
+    # Handle Player Presence control
+    # Yes for On-Field and Starter models, No for Attempt models
+    player_presence_idx <- which(control_categories == "Player Presence")
+    if (grepl("Attempt", col_name)) {
+      control_vals[player_presence_idx + 1] <- "No"
+    } else {
+      control_vals[player_presence_idx + 1] <- "Yes"
+    }
+    
+    # Add values for player variable controls
+    if (is_offense) {
+      if (grepl("Player|Starter", col_name)) {
+        # For offensive models player/starter, control defensive players
+        control_vals <- c(control_vals, "Yes", "No")
+      } else {
+        # For attempt models, only control defensive players
+        control_vals <- c(control_vals, "Yes", "No")
+      }
+    } else {
+      if (grepl("Player|Starter", col_name)) {
+        # For defensive models player/starter, control offensive players
+        control_vals <- c(control_vals, "Yes", "No")
+      } else {
+        # For attempt models, only control offensive players
+        control_vals <- c(control_vals, "Yes", "No")
+      }
+    }
+    
+    control_data[[col_name]] <- control_vals
+  }
+  
+  # Combine tables
+  final_table <- rbind(
+    table_data,
+    control_data
+  )
+
+  # Calculate row indices for styling
+  control_header_idx <- nrow(table_data) + 1
+  
+  # Generate LaTeX table with proper formatting using kableExtra
+  latex_table <- kable(final_table, 
+        format = "latex", 
+        booktabs = TRUE,
+        linesep = "",  # Add this to remove the gaps every 5 rows
+        caption = paste(dataset_name, "Model Results"),
+        align = c('l', rep('c', ncol(final_table) - 1)),
+        escape = FALSE) %>%
+    kable_styling(latex_options = c("scale_down", "hold_position"),
+                  full_width = FALSE,
+                  font_size = 9) %>%
+    row_spec(0, bold = TRUE) %>%
+    add_header_above(c(" " = 1, "Starter Models" = 3, "On-Field Models" = 3, "Attempt Models" = 3)) %>%
+    column_spec(1, width = "3.5cm")
+  
+  # Color group headers with darker background
+  for (idx in group_indices) {
+    latex_table <- latex_table %>% 
+      row_spec(idx, bold = TRUE, background = "#D3D3D3")
+  }
+  
+  # Apply alternating colors position by position to maintain consistent light-dark pattern
+  current_pos <- NULL
+  pos_row_count <- 0
+  
+  for (i in 1:nrow(table_data)) {
+    # Skip group headers (they have their own styling)
+    if (i %in% group_indices) {
+      current_pos <- i
+      pos_row_count <- 0
+      next
+    }
+    
+    # If this row belongs to the current position group
+    if (!is.null(current_pos) && i > current_pos && !(i %in% group_indices)) {
+      pos_row_count <- pos_row_count + 1
+      
+      # Apply alternating light/dark colors
+      if (pos_row_count %% 2 == 1) {
+        # Odd rows (1st, 3rd, etc.) get light background
+        latex_table <- latex_table %>% row_spec(i, background = "#FAFAFA") 
+      } else {
+        # Even rows (2nd, 4th, etc.) get slightly darker background
+        latex_table <- latex_table %>% row_spec(i, background = "#F2F2F2")
+      }
+    }
+  }
+  
+  # Add midrule before control variables
+  latex_table <- latex_table %>% row_spec(control_header_idx - 1, extra_css = "border-bottom: 2px solid black;")
+  
+  # Bold the Control Variables header
+  latex_table <- latex_table %>% row_spec(control_header_idx, bold = TRUE, background = "#D3D3D3")
+  
+  # Add alternating colors to control variable rows - using lighter colors
+  control_var_rows <- seq(control_header_idx + 1, nrow(final_table))
+  
+  for (i in 1:length(control_var_rows)) {
+    row_idx <- control_var_rows[i]
+    
+    if (i %% 2 == 1) {
+      # Odd rows (1st, 3rd, etc.) get light background
+      latex_table <- latex_table %>% row_spec(row_idx, background = "#FAFAFA")
+    } else {
+      # Even rows (2nd, 4th, etc.) get slightly darker background
+      latex_table <- latex_table %>% row_spec(row_idx, background = "#F2F2F2")
+    }
+  }
+  
+  # Add footnote
+  latex_table <- latex_table %>% 
+    footnote(
+      general = "Marginal effects reported with standard errors in parentheses and significance levels.",
+      symbol = c("* p < 0.10, ** p < 0.05, *** p < 0.01")
+    )
+  
+  print(latex_table)
+}
+```

@@ -1,0 +1,1292 @@
+---
+title: "heck_probit"
+output: pdf_document
+date: "2025-03-31"
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE)
+# Heckman Selection Model Analysis for All Datasets
+# This script runs Heckman selection models on all processed datasets
+
+library(data.table)
+library(randomForest)
+library(ROCR)
+library(sandwich)
+library(lmtest)
+library(car)
+library(mfx)  # Added for better marginal effects calculation
+
+# Options for better output
+options(max.print=10000)
+
+```
+
+```{r}
+# Column Name Transformer for Football Analytics with individual OL positions
+transform_column_names <- function(df) {
+  # Position mapping with individual OL positions
+  offense_positions <- c(
+    # QB slots (1-3)
+    "1" = "QB", "2" = "QB2", "3" = "QB3",
+    # Backs slots (4-7)
+    "4" = "RB", "5" = "RB2", "6" = "FB", "7" = "FB2",
+    # Wide receivers slots (8-13)
+    "8" = "WR1", "9" = "WR2", "10" = "WR3", "11" = "WR4", "12" = "WR5", "13" = "WR6",
+    # Tight ends slots (14-16)
+    "14" = "TE1", "15" = "TE2", "16" = "TE3",
+    # Offensive line slots (17-24) - now with unique identifiers
+    "17" = "OL1", "18" = "OL2", "19" = "OL3", "20" = "OL4", "21" = "OL5", 
+    "22" = "OL6", "23" = "OL7", "24" = "OL8"
+  )
+  
+  defense_positions <- c(
+    # Defensive line slots (1-8)
+    "1" = "DL1", "2" = "DL2", "3" = "DL3", "4" = "DL4", 
+    "5" = "DL5", "6" = "DL6", "7" = "DL7", "8" = "DL8",
+    # Linebackers slots (9-14)
+    "9" = "LB1", "10" = "LB2", "11" = "LB3", "12" = "LB4", 
+    "13" = "LB5", "14" = "LB6",
+    # Cornerbacks slots (15-19)
+    "15" = "CB1", "16" = "CB2", "17" = "CB3", "18" = "CB4", "19" = "CB5",
+    # Safeties slots (20-23)
+    "20" = "S1", "21" = "S2", "22" = "S3", "23" = "S4"
+  )
+  
+  # Get column names
+  cols <- colnames(df)
+  new_cols <- cols
+  
+  for (i in seq_along(cols)) {
+    col <- cols[i]
+    
+    # Handle offense player patterns
+    if (grepl("offense_player_", col)) {
+      player_num <- gsub(".*offense_player_([0-9\\-]+).*", "\\1", col)
+      
+      # Determine position
+      if (grepl("-", player_num)) {
+        # Handle OL range notation if present (e.g., "17-21")
+        # Extract the range and assign appropriate OL position
+        range_parts <- strsplit(player_num, "-")[[1]]
+        if (length(range_parts) == 2) {
+          start_num <- as.numeric(range_parts[1])
+          if (start_num >= 17 && start_num <= 24) {
+            position <- paste0("OL", start_num - 16)  # Convert slot to OL position number
+          } else {
+            position <- paste0("OFF", player_num)
+          }
+        } else {
+          position <- paste0("OFF", player_num)
+        }
+      } else if (player_num %in% names(offense_positions)) {
+        position <- offense_positions[player_num]
+      } else {
+        position <- paste0("OFF", player_num)
+      }
+      
+      # Replace pattern and remove first two words after
+      if (grepl("^starter_", col)) {
+        parts <- strsplit(gsub("starter_offense_player_[0-9\\-]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste("starter", position, paste(parts, collapse = "_"), sep = "_")
+      } else {
+        parts <- strsplit(gsub("offense_player_[0-9\\-]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste(position, paste(parts, collapse = "_"), sep = "_")
+      }
+    }
+    
+    # Handle defense player patterns (same as before)
+    else if (grepl("defense_player_", col)) {
+      player_num <- gsub(".*defense_player_([0-9]+).*", "\\1", col)
+      
+      # Determine position
+      if (player_num %in% names(defense_positions)) {
+        position <- defense_positions[player_num]
+      } else {
+        position <- paste0("DEF", player_num)
+      }
+      
+      # Replace pattern and remove first two words after
+      if (grepl("^starter_", col)) {
+        parts <- strsplit(gsub("starter_defense_player_[0-9]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste("starter", position, paste(parts, collapse = "_"), sep = "_")
+      } else {
+        parts <- strsplit(gsub("defense_player_[0-9]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste(position, paste(parts, collapse = "_"), sep = "_")
+      }
+    }
+  }
+  
+  # Set the new column names
+  colnames(df) <- new_cols
+  return(df)
+}
+
+run_heckman <- function(select_data, outcome_data, n_validation = n_validation) {
+  
+  # Data preparation
+ # Data preparation
+  select_data[, attempt := as.numeric(as.character(attempt))]
+  
+  # Add your new cleaning code here
+  # Remove unwanted columns
+  select_data[, c("attendance_raw", "attendance_pct") := NULL]
+  # Remove specific columns if they exist
+  if ("yardline_31_40" %in% names(select_data)) select_data[, yardline_31_40 := NULL]
+  if ("Giff_Smith" %in% names(select_data)) select_data[, Giff_Smith := NULL]
+  
+  
+  
+  # Make a copy of select_data for Random Forest
+  rf_data <- copy(select_data)
+  
+  # Remove coach columns
+  coach_cols <- names(rf_data)[grep("^[A-Z][a-z]+_[A-Z][a-z]+", names(rf_data))]
+  rf_data[, (coach_cols) := NULL]
+  
+  # Remove specific coach columns
+  rf_data[, Bill_OBrien := NULL] 
+  rf_data[, Kevin_OConnell := NULL]
+  rf_data[, DeMeco_Ryans := NULL]
+  
+  # Prepare data for Random Forest
+  rf_data[, my_id := NULL]  # Remove ID column
+  y <- as.factor(rf_data$attempt)  # Convert response to factor
+  rf_data[, attempt := NULL]  # Remove response from predictors
+  
+  # Train probit model
+  probit_model <- glm(y ~ ., data = rf_data, family = binomial(link = "probit"))
+  
+  # Get probability predictions (z) for ALL data
+  z <- predict(probit_model, rf_data, type = "response")  # Get probabilities
+  
+  # Calculate residuals
+  residuals <- as.numeric(as.character(y)) - z
+  
+  # Calculate GIMR (lambda) - Generalized inverse mills ratio
+  #GIMR <- dnorm(z) / (1 - z)
+  #GIMR <- dnorm(z, mean = mean(z), sd = sd(z)) / (1 - z)
+  #GIMR <- z/(1-z)
+  #GIMR <- dnorm(z) / (1 - pnorm(z))
+  #make gimr just completly be random
+  GIMR <- rnorm(nrow(rf_data))
+# Add GIMR to the data
+select_data[, GIMR := GIMR]
+
+  # Create a data.table with just my_id and GIMR from select_data
+  GIMR_dt <- data.table(my_id = select_data$my_id, GIMR = GIMR)
+  
+  # Add GIMR to outcome_data by matching on my_id
+  outcome_data[GIMR_dt, GIMR := i.GIMR, on = "my_id"]
+  
+  # Remove GIMR from select_data so it's not in the attempt models
+  select_data[, GIMR := NULL]
+  
+  select_data[, my_id := NULL]
+
+  # Data preparation for outcome models
+  # Create copies for different models
+  outcome_data_player <- copy(outcome_data)
+  outcome_data_starter <- copy(outcome_data)
+  
+# Clean data for both models
+for (dt in list(outcome_data_player, outcome_data_starter)) {
+  dt[, my_id := NULL]
+  dt[, yardline_31_40 := NULL]
+  dt[, year2022_team_CLE := NULL]
+
+  # Remove attendance variables
+  dt[, attendance_pct := NULL]
+  dt[, attendance_raw := NULL]
+
+  # Identify columns with "_present" in the name
+  present_cols <- grep("_present", names(dt), value = TRUE)
+  
+  # First, remove columns that are entirely 1 or entirely 0
+  for (col in present_cols) {
+    # Check if column is entirely 1 or entirely 0
+    if (all(dt[[col]] == 1) || all(dt[[col]] == 0)) {
+      dt[, (col) := NULL]
+      # Remove from the list of present columns
+      present_cols <- setdiff(present_cols, col)
+    }
+  }
+  
+  # Create patterns for positions to keep
+  positions_to_keep <- c(
+    # Offense
+    "QB_present$",              # QB
+    "WR[1-3]_present$",             # WR1, WR2, WR3
+    "RB1*_present$",                # RB (with or without 1)
+   # dont keep OL due to multicolinearity
+    # Defense
+    "DL[2-4]_present$",             # DL2, DL3, DL4
+    "LB[3-4]_present$",              # LB3, LB4
+    "CB[1-3]_present$",             # CB1, CB2, CB3
+    "S[1-2]_present$"                # S1, S2
+  )
+  
+  # Create a single pattern to match all positions to keep
+  keep_pattern <- paste0("(", paste(positions_to_keep, collapse = "|"), ")")
+  
+  # Find columns to keep based on the pattern
+  cols_to_keep <- grep(keep_pattern, present_cols, value = TRUE)
+  
+  # Find all present columns to remove (those not matched by our pattern)
+  cols_to_remove <- setdiff(present_cols, cols_to_keep)
+  
+  # Remove the unwanted present columns
+  if (length(cols_to_remove) > 0) {
+    dt[, (cols_to_remove) := NULL]
+  }
+  
+  # For outcome_data_starter, duplicate non-starter _present columns with starter_ prefix
+  if (identical(dt, outcome_data_starter)) {
+    # Find all _present columns that don't already have starter_ prefix
+    present_cols_no_prefix <- grep("_present$", names(dt), value = TRUE) 
+    present_cols_no_prefix <- present_cols_no_prefix[!grepl("^starter_", present_cols_no_prefix)]
+    
+    # Add duplicates with starter_ prefix
+    for (col in present_cols_no_prefix) {
+      new_col <- paste0("starter_", col)
+      dt[, (new_col) := dt[[col]]]
+    }
+  }
+}
+
+  # Updated pattern matching for player/starter models after column name transformation
+  
+  # For player models, remove starter columns
+  player_cols <- grep("^starter_", names(outcome_data_player), value = TRUE)
+  for (col in player_cols) {
+    outcome_data_player[, (col) := NULL]
+  }
+  
+  # For starter models, remove regular player columns - updated pattern matching
+  # We need to filter out non-starter columns that aren't utility columns (like 'week', 'yardline', etc.)
+  
+  # First, identify all position-related columns that aren't starter columns
+# First, identify all position-related columns that aren't starter columns
+# Updated to include individual OL positions (OL1-OL8)
+position_prefixes <- c("QB", "QB[2-3]", "RB", "RB2", "FB", "FB2", 
+                       "WR\\d+", "TE\\d+", 
+                       "OL\\d+",  # Changed from "OL" to "OL\\d+" to match OL1, OL2, etc.
+                       "DL\\d+", "LB\\d+", "CB\\d+", "S\\d+")
+
+# Create regex pattern for position columns
+position_pattern <- paste0("^(", paste(position_prefixes, collapse = "|"), ")_")
+  
+  # Find all position columns that are NOT starter columns
+  player_position_cols <- grep(position_pattern, names(outcome_data_starter), value = TRUE)
+  player_position_cols <- player_position_cols[!grepl("^starter_", player_position_cols)]
+  
+  # Remove these from starter model
+  for (col in player_position_cols) {
+    outcome_data_starter[, (col) := NULL]
+  }
+  
+  # Ensure conversion is numeric
+  for (dt in list(outcome_data_player, outcome_data_starter)) {
+    dt[, conversion := as.numeric(as.character(conversion))]
+  }
+  
+  # MODEL 1: Player model with GIMR
+  ols_model_player <- lm(conversion ~ ., data = outcome_data_player)
+  probit_model_player <- glm(conversion ~ ., data = outcome_data_player, family = binomial(link = "probit"))
+  logit_model_player <- glm(conversion ~ ., data = outcome_data_player, family = binomial(link = "logit"))
+  
+  # MODEL 2: Starter model with GIMR
+  ols_model_starter <- lm(conversion ~ ., data = outcome_data_starter)
+  probit_model_starter <- glm(conversion ~ ., data = outcome_data_starter, family = binomial(link = "probit"))
+  logit_model_starter <- glm(conversion ~ ., data = outcome_data_starter, family = binomial(link = "logit"))
+
+  # MODEL 3: OLS model with GIMR and attempt
+  ols_model_attempts <- lm(attempt ~ ., data = select_data)
+  probit_model_attempts <- glm(attempt ~ ., data = select_data, family = binomial(link = "probit"))
+  logit_model_attempts <- glm(attempt ~ ., data = select_data, family = binomial(link = "logit"))
+  
+  # Return results as a list
+  results <- list(
+    ols_model_player = ols_model_player,
+    probit_model_player = probit_model_player,
+    logit_model_player = logit_model_player,
+    ols_starter_model = ols_model_starter,
+    probit_starter_model = probit_model_starter,
+    logit_starter_model = logit_model_starter,
+    ols_attempts_model = ols_model_attempts,
+    probit_attempts_model = probit_model_attempts,
+    logit_attempts_model = logit_model_attempts
+  )
+  
+  return(results)
+}
+
+# Define the datasets to analyze
+datasets <- list(
+  list(outcome = "processed_predict_ccafd_off_grades.csv.csv.gz", select = "processed_predict_ccfd_off_grades.csv.csv.gz"),
+  list(outcome = "processed_predict_ccafd_off_yards.csv.csv.gz", select = "processed_predict_ccfd_off_yards.csv.csv.gz"),
+  list(outcome = "processed_predict_ccafd_off_completions.csv.csv.gz", select = "processed_predict_ccfd_off_completions.csv.csv.gz"),
+  list(outcome = "processed_predict_ccafd_def_stops.csv.csv.gz", select = "processed_predict_ccfd_def_stops.csv.csv.gz"),
+  list(outcome = "processed_predict_ccafd_def_grades.csv.csv.gz", select = "processed_predict_ccfd_def_grades.csv.csv.gz"),
+  list(outcome = "processed_predict_ccafd_def_tackles.csv.csv.gz", select = "processed_predict_ccfd_def_tackles.csv.csv.gz")
+)
+
+# Initialize the all_outcome_models list here, before the loop
+all_outcome_models <- list()
+
+# Process each dataset pair
+for (i in 1:length(datasets)) {
+  # Clean up dataset name for display
+  dataset_path <- datasets[[i]]$outcome
+  dataset_name <- gsub("processed_predict_ccafd_|.csv.csv.gz", "", dataset_path)
+  
+  # Make dataset name more readable
+  dataset_name <- gsub("_", " ", dataset_name)
+  dataset_name <- gsub("off", "Offense", dataset_name)
+  dataset_name <- gsub("def", "Defense", dataset_name)
+  dataset_name <- tools::toTitleCase(dataset_name)
+  
+  # Read the data
+  cat(sprintf("Reading data: %s\n", datasets[[i]]$outcome))
+  outcome_data <- fread(datasets[[i]]$outcome)
+  
+  cat(sprintf("Reading data: %s\n", datasets[[i]]$select))
+  select_data <- fread(datasets[[i]]$select)
+  
+  # Apply the column name transformation to both datasets
+  outcome_data <- transform_column_names(outcome_data)
+  select_data <- transform_column_names(select_data)
+  
+  # Run the analysis with our function
+  results <- run_heckman(
+    select_data = select_data, 
+    outcome_data = outcome_data,
+    n_validation = 1
+  )
+  
+  # Store models for QB depth analysis
+  all_outcome_models[[dataset_name]] <- list(
+    ols_model_player = results$ols_model_player,
+    probit_model_player = results$probit_model_player,
+    logit_model_player = results$logit_model_player,
+    ols_starter_model = results$ols_starter_model,
+    probit_starter_model = results$probit_starter_model,
+    logit_starter_model = results$logit_starter_model,
+    ols_attempts_model = results$ols_attempts_model,
+    probit_attempts_model = results$probit_attempts_model,
+    logit_attempts_model = results$logit_attempts_model
+  )
+}
+  
+```
+
+```{r create_matrices}
+# # Create matrices for t-values and marginal effects
+# # Function to calculate average marginal effects for probit models
+# probit_avg_mfx <- function(model) {
+#   coefs <- coef(model)
+#   X <- model.matrix(model)
+#   
+#   # Calculate density at each observation
+#   density <- dnorm(X %*% coefs)
+#   
+#   # Average marginal effect for each coefficient
+#   mfx <- colMeans(density * X)
+#   
+#   return(mfx)
+# }
+# 
+# # Function to calculate average marginal effects for logit models
+# logit_avg_mfx <- function(model) {
+#   coefs <- coef(model)
+#   X <- model.matrix(model)
+#   
+#   # Calculate the linear predictor
+#   z <- X %*% coefs
+#   
+#   # Calculate logistic density at each observation
+#   # For logit, density = exp(z)/(1+exp(z))^2
+#   density <- exp(z) / (1 + exp(z))^2
+#   
+#   # Average marginal effect for each coefficient
+#   mfx <- colMeans(density * X)
+#   
+#   return(mfx)
+# }
+
+# Function to extract robust standard errors
+get_robust_se <- function(model) {
+  if (inherits(model, "lm") || inherits(model, "glm")) {
+    # For both OLS and GLM models (probit/logit)
+    robust_se <- sqrt(diag(vcovHC(model, type = "HC1")))
+    return(robust_se)
+  } else if (inherits(model, "mfx")) {
+    # If it's an mfx object, get the standard errors directly
+    return(model$mfxse)
+  } else {
+    stop("Unknown model type")
+  }
+}
+
+# Function to extract t-values using marginal effects (ME) divided by standard errors (SE)
+get_tvalues <- function(model) {
+  # Get marginal effects
+  mfx <- get_marginal_effects(model)
+  
+  # Get standard errors
+  se <- get_robust_se(model)
+  
+  # Ensure both vectors have the same names and are aligned
+  common_names <- intersect(names(mfx), names(se))
+  
+  # Initialize t-values vector with NAs
+  tvals <- rep(NA, length(common_names))
+  names(tvals) <- common_names
+  
+  # Calculate t-values one by one to avoid recycling
+  for (var in common_names) {
+    tvals[var] <- mfx[var] / se[var]
+  }
+  
+  # Add debugging for the GIMR variable (if it exists)
+  if ("GIMR" %in% common_names) {
+    cat("\nDebugging for GIMR in", class(model)[1], "model:\n")
+    cat("Marginal Effect:", mfx["GIMR"], "\n")
+    cat("Standard Error:", se["GIMR"], "\n")
+    cat("Calculated t-value (ME/SE):", tvals["GIMR"], "\n")
+    
+    # Manual check to verify calculation
+    cat("Manual check t-value:", mfx["GIMR"] / se["GIMR"], "\n")
+    
+    # If it's a linear model, also show the old approach for comparison
+    if (inherits(model, "lm")) {
+      coefs <- coef(model)
+      old_se <- sqrt(diag(vcovHC(model, type = "HC1")))
+      old_tvals <- coefs["GIMR"] / old_se["GIMR"]
+      cat("Old approach - Coefficient:", coefs["GIMR"], "\n")
+      cat("Old approach - Robust SE:", old_se["GIMR"], "\n")
+      cat("Old approach - t-value (Coef/SE):", old_tvals, "\n\n")
+    } else {
+      cat("\n")
+    }
+  }
+  
+  return(tvals)
+}
+
+# Function to extract marginal effects using mfx package
+get_marginal_effects <- function(model) {
+  if (inherits(model, "lm")) {
+    # For OLS models, coefficients are marginal effects
+    return(coef(model))
+  } else if (inherits(model, "glm") && model$family$link == "probit") {
+    # For probit models, use the mfx package to calculate marginal effects
+    mfx_result <- tryCatch({
+      # Run probit.mfx with robust standard errors
+      probit_mfx <- probit.mfx(formula = formula(model), data = model.frame(model), robust = TRUE)
+      
+      # Return just the marginal effects (not the standard errors)
+      return(probit_mfx$mfxest)
+    }, error = function(e) {
+      # If there's an error, fall back to the original method
+      warning("mfx package failed, falling back to manual calculation: ", e$message)
+      #return(probit_avg_mfx(model))
+    })
+    return(mfx_result)
+  } else if (inherits(model, "glm") && model$family$link == "logit") {
+    # For logit models, use the mfx package to calculate marginal effects
+    mfx_result <- tryCatch({
+      # Run logit.mfx with robust standard errors
+      logit_mfx <- logit.mfx(formula = formula(model), data = model.frame(model), robust = TRUE)
+      
+      # Return just the marginal effects (not the standard errors)
+      return(logit_mfx$mfxest)
+    }, error = function(e) {
+      # If there's an error, fall back to the original method
+      warning("mfx package failed, falling back to manual calculation: ", e$message)
+      #return(logit_avg_mfx(model))
+    })
+    return(mfx_result)
+  } else {
+    stop("Unknown model type")
+  }
+}
+
+# Add validation function to verify t-values
+validate_t_values <- function(mfx, se, tvals, var_name = "GIMR") {
+  if (var_name %in% names(mfx) && var_name %in% names(se)) {
+    cat("\nValidating t-value for", var_name, ":\n")
+    cat("Marginal effect:", mfx[var_name], "\n")
+    cat("Standard error:", se[var_name], "\n")
+    cat("Computed t-value:", tvals[var_name], "\n")
+    cat("Manual check (mfx/se):", mfx[var_name]/se[var_name], "\n")
+    cat("Match?", abs(tvals[var_name] - mfx[var_name]/se[var_name]) < 0.0001, "\n\n")
+  }
+}
+
+# Create lists to store all matrices
+all_tval_matrices <- list()
+all_mfx_matrices <- list()
+all_se_matrices <- list()
+
+# Process each dataset
+for (dataset_name in names(all_outcome_models)) {
+  cat("\nProcessing", dataset_name, "matrix\n")
+  models <- all_outcome_models[[dataset_name]]
+  
+  # Collect all variable names from all models for this dataset
+  all_vars <- unique(c(
+    names(coef(models$ols_starter_model)),
+    names(coef(models$probit_starter_model)),
+    names(coef(models$ols_model_player)),
+    names(coef(models$probit_model_player)),
+    names(coef(models$ols_attempts_model)),
+    names(coef(models$probit_attempts_model))
+  ))
+  
+  starter_position_vars <- grep("^starter_(QB|RB|FB|WR\\d+|TE\\d+|OL\\d+|DL\\d+|LB\\d+|CB\\d+|S\\d+)_", all_vars, value = TRUE)
+  
+  # All non-player variables and player variables without starter_ prefix
+  regular_vars <- setdiff(all_vars, starter_position_vars)
+  
+  # Create mapping between starter position variables and their regular counterparts
+  var_mapping <- list()
+  
+  for (var in starter_position_vars) {
+    # Remove "starter_" prefix to get the base variable name
+    base_var <- sub("^starter_", "", var)
+    # Add to mapping
+    var_mapping[[base_var]] <- var
+  }
+  
+  # Get all unique base variable names for the combined matrix
+  # This includes all regular variables and the base names of starter position variables
+  base_vars <- unique(c(
+    regular_vars,
+    sapply(starter_position_vars, function(x) sub("^starter_", "", x))
+  ))
+  
+  # Create matrices for t-values, marginal effects, and standard errors for ALL variables
+  tval_matrix <- matrix(NA, nrow = length(base_vars), ncol = 9)
+  mfx_matrix <- matrix(NA, nrow = length(base_vars), ncol = 9)
+  se_matrix <- matrix(NA, nrow = length(base_vars), ncol = 9)
+  
+  # Set row and column names
+  rownames(tval_matrix) <- base_vars
+  rownames(mfx_matrix) <- base_vars
+  rownames(se_matrix) <- base_vars
+  colnames(tval_matrix) <- c("Starter OLS", "Starter Probit", "Starter Logit", 
+                             "Player OLS", "Player Probit", "Player Logit", 
+                             "Attempt OLS", "Attempt Probit", "Attempt Logit")
+  colnames(mfx_matrix) <- c("Starter OLS", "Starter Probit", "Starter Logit", 
+                            "Player OLS", "Player Probit", "Player Logit", 
+                            "Attempt OLS", "Attempt Probit", "Attempt Logit")
+  colnames(se_matrix) <- c("Starter OLS", "Starter Probit", "Starter Logit", 
+                           "Player OLS", "Player Probit", "Player Logit", 
+                           "Attempt OLS", "Attempt Probit", "Attempt Logit")
+  
+  # Get t-values, marginal effects, and standard errors for all models
+  tvals_list <- list(
+    starter_ols = tryCatch(get_tvalues(models$ols_starter_model), error = function(e) NULL),
+    starter_probit = tryCatch(get_tvalues(models$probit_starter_model), error = function(e) NULL),
+    starter_logit = tryCatch(get_tvalues(models$logit_starter_model), error = function(e) NULL),
+    player_ols = tryCatch(get_tvalues(models$ols_model_player), error = function(e) NULL),
+    player_probit = tryCatch(get_tvalues(models$probit_model_player), error = function(e) NULL),
+    player_logit = tryCatch(get_tvalues(models$logit_model_player), error = function(e) NULL),
+    attempt_ols = tryCatch(get_tvalues(models$ols_attempts_model), error = function(e) NULL),
+    attempt_probit = tryCatch(get_tvalues(models$probit_attempts_model), error = function(e) NULL),
+    attempt_logit = tryCatch(get_tvalues(models$logit_attempts_model), error = function(e) NULL)
+  )
+  
+  mfx_list <- list(
+    starter_ols = tryCatch(get_marginal_effects(models$ols_starter_model), error = function(e) NULL),
+    starter_probit = tryCatch(get_marginal_effects(models$probit_starter_model), error = function(e) NULL),
+    starter_logit = tryCatch(get_marginal_effects(models$logit_starter_model), error = function(e) NULL),
+    player_ols = tryCatch(get_marginal_effects(models$ols_model_player), error = function(e) NULL),
+    player_probit = tryCatch(get_marginal_effects(models$probit_model_player), error = function(e) NULL),
+    player_logit = tryCatch(get_marginal_effects(models$logit_model_player), error = function(e) NULL),
+    attempt_ols = tryCatch(get_marginal_effects(models$ols_attempts_model), error = function(e) NULL),
+    attempt_probit = tryCatch(get_marginal_effects(models$probit_attempts_model), error = function(e) NULL),
+    attempt_logit = tryCatch(get_marginal_effects(models$logit_attempts_model), error = function(e) NULL)
+  )
+  
+  se_list <- list(
+    starter_ols = tryCatch(get_robust_se(models$ols_starter_model), error = function(e) NULL),
+    starter_probit = tryCatch(get_robust_se(models$probit_starter_model), error = function(e) NULL),
+    starter_logit = tryCatch(get_robust_se(models$logit_starter_model), error = function(e) NULL),
+    player_ols = tryCatch(get_robust_se(models$ols_model_player), error = function(e) NULL),
+    player_probit = tryCatch(get_robust_se(models$probit_model_player), error = function(e) NULL),
+    player_logit = tryCatch(get_robust_se(models$logit_model_player), error = function(e) NULL),
+    attempt_ols = tryCatch(get_robust_se(models$ols_attempts_model), error = function(e) NULL),
+    attempt_probit = tryCatch(get_robust_se(models$probit_attempts_model), error = function(e) NULL),
+    attempt_logit = tryCatch(get_robust_se(models$logit_attempts_model), error = function(e) NULL)
+  )
+  
+  # Fill matrices with combined variable values
+  for (var in base_vars) {
+    # For player models (columns 4-6)
+    if (!is.null(tvals_list$player_ols) && var %in% names(tvals_list$player_ols)) {
+      tval_matrix[var, 4] <- tvals_list$player_ols[var]
+    }
+    if (!is.null(tvals_list$player_probit) && var %in% names(tvals_list$player_probit)) {
+      tval_matrix[var, 5] <- tvals_list$player_probit[var]
+    }
+    if (!is.null(tvals_list$player_logit) && var %in% names(tvals_list$player_logit)) {
+      tval_matrix[var, 6] <- tvals_list$player_logit[var]
+    }
+    if (!is.null(mfx_list$player_ols) && var %in% names(mfx_list$player_ols)) {
+      mfx_matrix[var, 4] <- mfx_list$player_ols[var]
+    }
+    if (!is.null(mfx_list$player_probit) && var %in% names(mfx_list$player_probit)) {
+      mfx_matrix[var, 5] <- mfx_list$player_probit[var]
+    }
+    if (!is.null(mfx_list$player_logit) && var %in% names(mfx_list$player_logit)) {
+      mfx_matrix[var, 6] <- mfx_list$player_logit[var]
+    }
+    if (!is.null(se_list$player_ols) && var %in% names(se_list$player_ols)) {
+      se_matrix[var, 4] <- se_list$player_ols[var]
+    }
+    if (!is.null(se_list$player_probit) && var %in% names(se_list$player_probit)) {
+      se_matrix[var, 5] <- se_list$player_probit[var]
+    }
+    if (!is.null(se_list$player_logit) && var %in% names(se_list$player_logit)) {
+      se_matrix[var, 6] <- se_list$player_logit[var]
+    }
+    
+    # For starter models (columns 1-3)
+    starter_var <- var_mapping[[var]]
+    
+    # Case 1: It's a position variable with starter_ prefix mapping
+    if (!is.null(starter_var)) {
+      if (!is.null(tvals_list$starter_ols) && starter_var %in% names(tvals_list$starter_ols)) {
+        tval_matrix[var, 1] <- tvals_list$starter_ols[starter_var]
+      }
+      if (!is.null(tvals_list$starter_probit) && starter_var %in% names(tvals_list$starter_probit)) {
+        tval_matrix[var, 2] <- tvals_list$starter_probit[starter_var]
+      }
+      if (!is.null(tvals_list$starter_logit) && starter_var %in% names(tvals_list$starter_logit)) {
+        tval_matrix[var, 3] <- tvals_list$starter_logit[starter_var]
+      }
+      if (!is.null(mfx_list$starter_ols) && starter_var %in% names(mfx_list$starter_ols)) {
+        mfx_matrix[var, 1] <- mfx_list$starter_ols[starter_var]
+      }
+      if (!is.null(mfx_list$starter_probit) && starter_var %in% names(mfx_list$starter_probit)) {
+        mfx_matrix[var, 2] <- mfx_list$starter_probit[starter_var]
+      }
+      if (!is.null(mfx_list$starter_logit) && starter_var %in% names(mfx_list$starter_logit)) {
+        mfx_matrix[var, 3] <- mfx_list$starter_logit[starter_var]
+      }
+      if (!is.null(se_list$starter_ols) && starter_var %in% names(se_list$starter_ols)) {
+        se_matrix[var, 1] <- se_list$starter_ols[starter_var]
+      }
+      if (!is.null(se_list$starter_probit) && starter_var %in% names(se_list$starter_probit)) {
+        se_matrix[var, 2] <- se_list$starter_probit[starter_var]
+      }
+      if (!is.null(se_list$starter_logit) && starter_var %in% names(se_list$starter_logit)) {
+        se_matrix[var, 3] <- se_list$starter_logit[starter_var]
+      }
+    } 
+    # Case 2: It's a regular variable (no starter_ prefix needed)
+    else {
+      if (!is.null(tvals_list$starter_ols) && var %in% names(tvals_list$starter_ols)) {
+        tval_matrix[var, 1] <- tvals_list$starter_ols[var]
+      }
+      if (!is.null(tvals_list$starter_probit) && var %in% names(tvals_list$starter_probit)) {
+        tval_matrix[var, 2] <- tvals_list$starter_probit[var]
+      }
+      if (!is.null(tvals_list$starter_logit) && var %in% names(tvals_list$starter_logit)) {
+        tval_matrix[var, 3] <- tvals_list$starter_logit[var]
+      }
+      if (!is.null(mfx_list$starter_ols) && var %in% names(mfx_list$starter_ols)) {
+        mfx_matrix[var, 1] <- mfx_list$starter_ols[var]
+      }
+      if (!is.null(mfx_list$starter_probit) && var %in% names(mfx_list$starter_probit)) {
+        mfx_matrix[var, 2] <- mfx_list$starter_probit[var]
+      }
+      if (!is.null(mfx_list$starter_logit) && var %in% names(mfx_list$starter_logit)) {
+        mfx_matrix[var, 3] <- mfx_list$starter_logit[var]
+      }
+      if (!is.null(se_list$starter_ols) && var %in% names(se_list$starter_ols)) {
+        se_matrix[var, 1] <- se_list$starter_ols[var]
+      }
+      if (!is.null(se_list$starter_probit) && var %in% names(se_list$starter_probit)) {
+        se_matrix[var, 2] <- se_list$starter_probit[var]
+      }
+      if (!is.null(se_list$starter_logit) && var %in% names(se_list$starter_logit)) {
+        se_matrix[var, 3] <- se_list$starter_logit[var]
+      }
+    }
+    
+    # For attempt models (columns 7-9)
+    # Attempt variables don't have the same naming convention, 
+    # so we just include them if they happen to match
+    if (!is.null(tvals_list$attempt_ols) && var %in% names(tvals_list$attempt_ols)) {
+      tval_matrix[var, 7] <- tvals_list$attempt_ols[var]
+    }
+    if (!is.null(tvals_list$attempt_probit) && var %in% names(tvals_list$attempt_probit)) {
+      tval_matrix[var, 8] <- tvals_list$attempt_probit[var]
+    }
+    if (!is.null(tvals_list$attempt_logit) && var %in% names(tvals_list$attempt_logit)) {
+      tval_matrix[var, 9] <- tvals_list$attempt_logit[var]
+    }
+    if (!is.null(mfx_list$attempt_ols) && var %in% names(mfx_list$attempt_ols)) {
+      mfx_matrix[var, 7] <- mfx_list$attempt_ols[var]
+    }
+    if (!is.null(mfx_list$attempt_probit) && var %in% names(mfx_list$attempt_probit)) {
+      mfx_matrix[var, 8] <- mfx_list$attempt_probit[var]
+    }
+    if (!is.null(mfx_list$attempt_logit) && var %in% names(mfx_list$attempt_logit)) {
+      mfx_matrix[var, 9] <- mfx_list$attempt_logit[var]
+    }
+    if (!is.null(se_list$attempt_ols) && var %in% names(se_list$attempt_ols)) {
+      se_matrix[var, 7] <- se_list$attempt_ols[var]
+    }
+    if (!is.null(se_list$attempt_probit) && var %in% names(se_list$attempt_probit)) {
+      se_matrix[var, 8] <- se_list$attempt_probit[var]
+    }
+    if (!is.null(se_list$attempt_logit) && var %in% names(se_list$attempt_logit)) {
+      se_matrix[var, 9] <- se_list$attempt_logit[var]
+    }
+    
+    # Also check for starter_ version in attempt models
+    if (!is.null(starter_var)) {
+      if (!is.null(tvals_list$attempt_ols) && starter_var %in% names(tvals_list$attempt_ols)) {
+        tval_matrix[var, 7] <- tvals_list$attempt_ols[starter_var]
+      }
+      if (!is.null(tvals_list$attempt_probit) && starter_var %in% names(tvals_list$attempt_probit)) {
+        tval_matrix[var, 8] <- tvals_list$attempt_probit[starter_var]
+      }
+      if (!is.null(tvals_list$attempt_logit) && starter_var %in% names(tvals_list$attempt_logit)) {
+        tval_matrix[var, 9] <- tvals_list$attempt_logit[starter_var]
+      }
+      if (!is.null(mfx_list$attempt_ols) && starter_var %in% names(mfx_list$attempt_ols)) {
+        mfx_matrix[var, 7] <- mfx_list$attempt_ols[starter_var]
+      }
+      if (!is.null(mfx_list$attempt_probit) && starter_var %in% names(mfx_list$attempt_probit)) {
+        mfx_matrix[var, 8] <- mfx_list$attempt_probit[starter_var]
+      }
+      if (!is.null(mfx_list$attempt_logit) && starter_var %in% names(mfx_list$attempt_logit)) {
+        mfx_matrix[var, 9] <- mfx_list$attempt_logit[starter_var]
+      }
+      if (!is.null(se_list$attempt_ols) && starter_var %in% names(se_list$attempt_ols)) {
+        se_matrix[var, 7] <- se_list$attempt_ols[starter_var]
+      }
+      if (!is.null(se_list$attempt_probit) && starter_var %in% names(se_list$attempt_probit)) {
+        se_matrix[var, 8] <- se_list$attempt_probit[starter_var]
+      }
+      if (!is.null(se_list$attempt_logit) && starter_var %in% names(se_list$attempt_logit)) {
+        se_matrix[var, 9] <- se_list$attempt_logit[starter_var]
+      }
+    }
+  }
+  
+  # Store the complete matrices with ALL variables (one matrix per dataset)
+  all_tval_matrices[[dataset_name]] <- tval_matrix
+  all_mfx_matrices[[dataset_name]] <- mfx_matrix
+  all_se_matrices[[dataset_name]] <- se_matrix
+}
+
+# Convert each matrix to its own data frame
+# For T-values
+off_grades_tval <- as.data.frame(all_tval_matrices[["Offense Grades"]])
+off_yards_tval <- as.data.frame(all_tval_matrices[["Offense Yards"]])
+off_completions_tval <- as.data.frame(all_tval_matrices[["Offense Completions"]])
+def_stops_tval <- as.data.frame(all_tval_matrices[["Defense Stops"]])
+def_grades_tval <- as.data.frame(all_tval_matrices[["Defense Grades"]])
+def_tackles_tval <- as.data.frame(all_tval_matrices[["Defense Tackles"]])
+
+# For Marginal Effects
+off_grades_mfx <- as.data.frame(all_mfx_matrices[["Offense Grades"]])
+off_yards_mfx <- as.data.frame(all_mfx_matrices[["Offense Yards"]])
+off_completions_mfx <- as.data.frame(all_mfx_matrices[["Offense Completions"]])
+def_stops_mfx <- as.data.frame(all_mfx_matrices[["Defense Stops"]])
+def_grades_mfx <- as.data.frame(all_mfx_matrices[["Defense Grades"]])
+def_tackles_mfx <- as.data.frame(all_mfx_matrices[["Defense Tackles"]])
+
+# For Standard Errors
+off_grades_se <- as.data.frame(all_se_matrices[["Offense Grades"]])
+off_yards_se <- as.data.frame(all_se_matrices[["Offense Yards"]])
+off_completions_se <- as.data.frame(all_se_matrices[["Offense Completions"]])
+def_stops_se <- as.data.frame(all_se_matrices[["Defense Stops"]])
+def_grades_se <- as.data.frame(all_se_matrices[["Defense Grades"]])
+def_tackles_se <- as.data.frame(all_se_matrices[["Defense Tackles"]])
+
+# Write matrices to CSV files
+# First create a directory for them if it doesn't exist
+if (!dir.exists("matrices2")) {
+  dir.create("matrices2")
+}
+
+# For T-values
+write.csv(off_grades_tval, "matrices2/off_grades_tval.csv", row.names = TRUE)
+write.csv(off_yards_tval, "matrices2/off_yards_tval.csv", row.names = TRUE)
+write.csv(off_completions_tval, "matrices2/off_completions_tval.csv", row.names = TRUE)
+write.csv(def_stops_tval, "matrices2/def_stops_tval.csv", row.names = TRUE)
+write.csv(def_grades_tval, "matrices2/def_grades_tval.csv", row.names = TRUE)
+write.csv(def_tackles_tval, "matrices2/def_tackles_tval.csv", row.names = TRUE)
+
+# For Marginal Effects
+write.csv(off_grades_mfx, "matrices2/off_grades_mfx.csv", row.names = TRUE)
+write.csv(off_yards_mfx, "matrices2/off_yards_mfx.csv", row.names = TRUE)
+write.csv(off_completions_mfx, "matrices2/off_completions_mfx.csv", row.names = TRUE)
+write.csv(def_stops_mfx, "matrices2/def_stops_mfx.csv", row.names = TRUE)
+write.csv(def_grades_mfx, "matrices2/def_grades_mfx.csv", row.names = TRUE)
+write.csv(def_tackles_mfx, "matrices2/def_tackles_mfx.csv", row.names = TRUE)
+
+# For Standard Errors
+write.csv(off_grades_se, "matrices2/off_grades_se.csv", row.names = TRUE)
+write.csv(off_yards_se, "matrices2/off_yards_se.csv", row.names = TRUE)
+write.csv(off_completions_se, "matrices2/off_completions_se.csv", row.names = TRUE)
+write.csv(def_stops_se, "matrices2/def_stops_se.csv", row.names = TRUE)
+write.csv(def_grades_se, "matrices2/def_grades_se.csv", row.names = TRUE)
+write.csv(def_tackles_se, "matrices2/def_tackles_se.csv", row.names = TRUE)
+
+cat("All matrices saved to the 'matrices2' directory.\n")
+```
+
+
+```{r}
+#data <- fread("processed_predict_ccafd_off_grades.csv.csv.gz")
+```
+
+```{r}
+# Improved VIF Calculation for All Models
+# This code calculates Variance Inflation Factors for all models in the all_outcome_models list
+# with improved error handling and diagnostics
+
+# Load necessary libraries
+library(data.table)
+library(car)  # For VIF calculation
+
+# Create lists to store all VIF matrices
+all_vif_matrices <- list()
+
+# Function to safely calculate VIF for a model with debug info
+calculate_vif_with_debug <- function(model, model_name, dataset_name) {
+  tryCatch({
+    # Check that model is valid
+    if (is.null(model)) {
+      cat(paste("Model", model_name, "in", dataset_name, "is NULL\n"))
+      return(NULL)
+    }
+    
+    # Check model type
+    if (!(inherits(model, "lm") || inherits(model, "glm"))) {
+      cat(paste("Model", model_name, "in", dataset_name, "is not of class lm or glm\n"))
+      return(NULL)
+    }
+    
+    # For GLM models, check if model converged
+    if (inherits(model, "glm") && !is.null(model$converged) && !model$converged) {
+      cat(paste("Model", model_name, "in", dataset_name, "did not converge\n"))
+      return(NULL)
+    }
+    
+    # Get model matrix and check for rank deficiency
+    model_matrix <- model.matrix(model)
+    qr_decomp <- qr(model_matrix)
+    
+    if (qr_decomp$rank < ncol(model_matrix)) {
+      cat(paste("Model", model_name, "in", dataset_name, "has rank deficiency:", 
+                qr_decomp$rank, "vs", ncol(model_matrix), "columns\n"))
+      
+      # Try to identify the problematic variables
+      problematic_vars <- colnames(model_matrix)[qr_decomp$pivot[(qr_decomp$rank+1):ncol(model_matrix)]]
+      if (length(problematic_vars) > 0) {
+        cat("Problematic variables: ", paste(problematic_vars, collapse=", "), "\n")
+      }
+      
+      # Even with rank deficiency, try to calculate VIF for variables that can be handled
+      vif_values <- tryCatch({
+        vif(model)
+      }, error = function(e) {
+        cat("Error calculating VIF even for subset of variables:", e$message, "\n")
+        return(NULL)
+      })
+      
+      return(vif_values)
+    }
+    
+    # Calculate VIF normally since we have full rank
+    vif_values <- vif(model)
+    
+    # Quick validation of VIF values
+    if (any(is.infinite(vif_values)) || any(is.na(vif_values))) {
+      cat(paste("Warning:", model_name, "in", dataset_name, 
+                "has", sum(is.infinite(vif_values)), "infinite and", 
+                sum(is.na(vif_values)), "NA VIF values\n"))
+    } else {
+      cat(paste("VIF calculation successful for", model_name, "in", dataset_name, 
+                "- Range:", round(min(vif_values), 2), "to", round(max(vif_values), 2), "\n"))
+    }
+    
+    return(vif_values)
+    
+  }, error = function(e) {
+    cat(paste("Error calculating VIF for", model_name, "in", dataset_name, ":", e$message, "\n"))
+    return(NULL)
+  })
+}
+
+# Alternate VIF calculation that doesn't rely on car::vif
+calculate_manual_vif <- function(model, model_name, dataset_name) {
+  tryCatch({
+    # Check that model is valid
+    if (is.null(model)) {
+      return(NULL)
+    }
+    
+    # Get model matrix without intercept
+    X <- model.matrix(model)[, -1, drop = FALSE]  # Remove intercept
+    
+    # Check if we have variables
+    if (ncol(X) == 0) {
+      cat(paste("No predictors in model", model_name, "in", dataset_name, "after removing intercept\n"))
+      return(NULL)
+    }
+    
+    # Check for perfect multicollinearity
+    if (qr(X)$rank < ncol(X)) {
+      cat(paste("Perfect multicollinearity detected in", model_name, "in", dataset_name, "\n"))
+    }
+    
+    # Initialize VIF vector
+    vif_vals <- numeric(ncol(X))
+    names(vif_vals) <- colnames(X)
+    
+    # Calculate VIF for each variable
+    for (i in 1:ncol(X)) {
+      # For each variable, regress it on all other variables
+      if (ncol(X) > 1) {  # Need at least 2 variables to calculate VIF
+        formula_str <- paste(colnames(X)[i], "~", 
+                           paste(colnames(X)[-i], collapse = " + "))
+        lm_i <- lm(formula_str, data = as.data.frame(X))
+        
+        # VIF = 1/(1-R²)
+        vif_vals[i] <- 1 / (1 - summary(lm_i)$r.squared)
+      } else {
+        # Only one predictor, VIF is 1
+        vif_vals[i] <- 1
+      }
+    }
+    
+    # Add intercept term (VIF is 1 for intercept)
+    vif_all <- c("(Intercept)" = 1, vif_vals)
+    
+    cat(paste("Manual VIF calculation successful for", model_name, "in", dataset_name, 
+              "- Range:", round(min(vif_vals), 2), "to", round(max(vif_vals), 2), "\n"))
+    
+    return(vif_all)
+    
+  }, error = function(e) {
+    cat(paste("Error in manual VIF calculation for", model_name, "in", dataset_name, ":", e$message, "\n"))
+    return(NULL)
+  })
+}
+
+# Try both methods for VIF calculation
+try_both_vif_methods <- function(model, model_name, dataset_name) {
+  # First try car::vif
+  vif_result <- calculate_vif_with_debug(model, model_name, dataset_name)
+  
+  # If that fails, try manual method
+  if (is.null(vif_result)) {
+    cat("Attempting manual VIF calculation as fallback...\n")
+    vif_result <- calculate_manual_vif(model, model_name, dataset_name)
+  }
+  
+  return(vif_result)
+}
+
+# Diagnostics function to examine model structure
+diagnose_model <- function(model, model_name, dataset_name) {
+  if (is.null(model)) {
+    cat(paste("Model", model_name, "in", dataset_name, "is NULL\n"))
+    return()
+  }
+  
+  cat(paste("\nDiagnosing model", model_name, "in", dataset_name, "\n"))
+  cat("Model class:", class(model), "\n")
+  cat("Number of observations:", nrow(model.frame(model)), "\n")
+  
+  # Check model terms
+  terms <- attr(terms(model), "term.labels")
+  cat("Number of terms:", length(terms), "\n")
+  
+  # Check model matrix
+  X <- model.matrix(model)
+  cat("Model matrix dimensions:", nrow(X), "x", ncol(X), "\n")
+  cat("Model matrix rank:", qr(X)$rank, "\n")
+  
+  # Check for rank deficiency
+  if (qr(X)$rank < ncol(X)) {
+    cat("RANK DEFICIENCY DETECTED!\n")
+    # Try to identify problematic variables
+    problematic_vars <- colnames(X)[qr(X)$pivot[(qr(X)$rank+1):ncol(X)]]
+    cat("Potentially problematic variables:", paste(problematic_vars, collapse=", "), "\n")
+  }
+  
+  # For GLM, check convergence
+  if (inherits(model, "glm")) {
+    converged <- ifelse(is.null(model$converged), "Not available", model$converged)
+    cat("Model converged:", converged, "\n")
+    cat("Number of iterations:", length(model$weights), "\n")
+  }
+  
+  # Check for perfect separation in logistic regression
+  if (inherits(model, "glm") && 
+      (model$family$family == "binomial" || model$family$link == "logit" || model$family$link == "probit")) {
+    max_coef <- max(abs(coef(model)), na.rm = TRUE)
+    if (max_coef > 10) {
+      cat("WARNING: Very large coefficients detected (", max_coef, ") - possible perfect separation\n")
+    }
+  }
+}
+
+# Process each dataset
+for (dataset_name in names(all_outcome_models)) {
+  cat("\n\n=== Processing VIF for", dataset_name, "===\n")
+  models <- all_outcome_models[[dataset_name]]
+  
+  # Run diagnostics on each model
+  diagnose_model(models$ols_starter_model, "ols_starter_model", dataset_name)
+  diagnose_model(models$probit_starter_model, "probit_starter_model", dataset_name)
+  diagnose_model(models$logit_starter_model, "logit_starter_model", dataset_name)
+  diagnose_model(models$ols_model_player, "ols_model_player", dataset_name)
+  diagnose_model(models$probit_model_player, "probit_model_player", dataset_name)
+  diagnose_model(models$logit_model_player, "logit_model_player", dataset_name)
+  diagnose_model(models$ols_attempts_model, "ols_attempts_model", dataset_name)
+  diagnose_model(models$probit_attempts_model, "probit_attempts_model", dataset_name)
+  diagnose_model(models$logit_attempts_model, "logit_attempts_model", dataset_name)
+  
+  # Get VIF for all models in this dataset
+  vif_list <- list(
+    starter_ols = try_both_vif_methods(models$ols_starter_model, "ols_starter_model", dataset_name),
+    starter_probit = try_both_vif_methods(models$probit_starter_model, "probit_starter_model", dataset_name),
+    starter_logit = try_both_vif_methods(models$logit_starter_model, "logit_starter_model", dataset_name),
+    player_ols = try_both_vif_methods(models$ols_model_player, "ols_model_player", dataset_name),
+    player_probit = try_both_vif_methods(models$probit_model_player, "probit_model_player", dataset_name),
+    player_logit = try_both_vif_methods(models$logit_model_player, "logit_model_player", dataset_name),
+    attempt_ols = try_both_vif_methods(models$ols_attempts_model, "ols_attempts_model", dataset_name),
+    attempt_probit = try_both_vif_methods(models$probit_attempts_model, "probit_attempts_model", dataset_name),
+    attempt_logit = try_both_vif_methods(models$logit_attempts_model, "logit_attempts_model", dataset_name)
+  )
+
+  # Collect all variable names from all VIF results for this dataset
+  all_vars <- unique(unlist(lapply(vif_list, function(x) if (!is.null(x)) names(x) else NULL)))
+  
+  # Skip if no VIF values were calculated
+  if (length(all_vars) == 0) {
+    cat("No VIF values could be calculated for any model in", dataset_name, ". Skipping.\n")
+    next
+  }
+  
+  # Separate starter position variables from regular variables (similar to your approach)
+  starter_position_vars <- grep("^starter_(QB|RB|FB|WR\\d+|TE\\d+|OL\\d+|DL\\d+|LB\\d+|CB\\d+|S\\d+)_", all_vars, value = TRUE)
+  regular_vars <- setdiff(all_vars, starter_position_vars)
+  
+  # Create mapping between starter position variables and their regular counterparts
+  var_mapping <- list()
+  
+  for (var in starter_position_vars) {
+    # Remove "starter_" prefix to get the base variable name
+    base_var <- sub("^starter_", "", var)
+    # Add to mapping
+    var_mapping[[base_var]] <- var
+  }
+  
+  # Get all unique base variable names for the combined matrix
+  base_vars <- unique(c(
+    regular_vars,
+    sapply(starter_position_vars, function(x) sub("^starter_", "", x))
+  ))
+  
+  # Create matrix for VIF values
+  vif_matrix <- matrix(NA, nrow = length(base_vars), ncol = 9)
+  
+  # Set row and column names
+  rownames(vif_matrix) <- base_vars
+  colnames(vif_matrix) <- c("Starter OLS", "Starter Probit", "Starter Logit", 
+                            "Player OLS", "Player Probit", "Player Logit", 
+                            "Attempt OLS", "Attempt Probit", "Attempt Logit")
+  
+  # Fill VIF matrix using the same approach as for t-values
+  for (var in base_vars) {
+    # For player models (columns 4-6)
+    if (!is.null(vif_list$player_ols) && var %in% names(vif_list$player_ols)) {
+      vif_matrix[var, 4] <- vif_list$player_ols[var]
+    }
+    if (!is.null(vif_list$player_probit) && var %in% names(vif_list$player_probit)) {
+      vif_matrix[var, 5] <- vif_list$player_probit[var]
+    }
+    if (!is.null(vif_list$player_logit) && var %in% names(vif_list$player_logit)) {
+      vif_matrix[var, 6] <- vif_list$player_logit[var]
+    }
+    
+    # For starter models (columns 1-3)
+    starter_var <- var_mapping[[var]]
+    
+    # Case 1: It's a position variable with starter_ prefix mapping
+    if (!is.null(starter_var)) {
+      if (!is.null(vif_list$starter_ols) && starter_var %in% names(vif_list$starter_ols)) {
+        vif_matrix[var, 1] <- vif_list$starter_ols[starter_var]
+      }
+      if (!is.null(vif_list$starter_probit) && starter_var %in% names(vif_list$starter_probit)) {
+        vif_matrix[var, 2] <- vif_list$starter_probit[starter_var]
+      }
+      if (!is.null(vif_list$starter_logit) && starter_var %in% names(vif_list$starter_logit)) {
+        vif_matrix[var, 3] <- vif_list$starter_logit[starter_var]
+      }
+    } 
+    # Case 2: It's a regular variable (no starter_ prefix needed)
+    else {
+      if (!is.null(vif_list$starter_ols) && var %in% names(vif_list$starter_ols)) {
+        vif_matrix[var, 1] <- vif_list$starter_ols[var]
+      }
+      if (!is.null(vif_list$starter_probit) && var %in% names(vif_list$starter_probit)) {
+        vif_matrix[var, 2] <- vif_list$starter_probit[var]
+      }
+      if (!is.null(vif_list$starter_logit) && var %in% names(vif_list$starter_logit)) {
+        vif_matrix[var, 3] <- vif_list$starter_logit[var]
+      }
+    }
+    
+    # For attempt models (columns 7-9)
+    if (!is.null(vif_list$attempt_ols) && var %in% names(vif_list$attempt_ols)) {
+      vif_matrix[var, 7] <- vif_list$attempt_ols[var]
+    }
+    if (!is.null(vif_list$attempt_probit) && var %in% names(vif_list$attempt_probit)) {
+      vif_matrix[var, 8] <- vif_list$attempt_probit[var]
+    }
+    if (!is.null(vif_list$attempt_logit) && var %in% names(vif_list$attempt_logit)) {
+      vif_matrix[var, 9] <- vif_list$attempt_logit[var]
+    }
+    
+    # Also check for starter_ version in attempt models
+    if (!is.null(starter_var)) {
+      if (!is.null(vif_list$attempt_ols) && starter_var %in% names(vif_list$attempt_ols)) {
+        vif_matrix[var, 7] <- vif_list$attempt_ols[starter_var]
+      }
+      if (!is.null(vif_list$attempt_probit) && starter_var %in% names(vif_list$attempt_probit)) {
+        vif_matrix[var, 8] <- vif_list$attempt_probit[starter_var]
+      }
+      if (!is.null(vif_list$attempt_logit) && starter_var %in% names(vif_list$attempt_logit)) {
+        vif_matrix[var, 9] <- vif_list$attempt_logit[starter_var]
+      }
+    }
+  }
+  
+  # Store the completed VIF matrix
+  all_vif_matrices[[dataset_name]] <- vif_matrix
+  
+  # Print some basic stats on the filled matrix
+  cat("\nVIF matrix for", dataset_name, ":\n")
+  cat("Dimensions:", nrow(vif_matrix), "x", ncol(vif_matrix), "\n")
+  cat("Number of NA values:", sum(is.na(vif_matrix)), "out of", prod(dim(vif_matrix)), "\n")
+  
+  # Calculate proportion of non-NA values per column
+  non_na_prop <- colMeans(!is.na(vif_matrix))
+  cat("Proportion of non-NA values per column:\n")
+  for (i in 1:ncol(vif_matrix)) {
+    cat("  ", colnames(vif_matrix)[i], ":", sprintf("%.2f%%", 100*non_na_prop[i]), "\n")
+  }
+}
+
+# Convert each matrix to its own data frame
+off_grades_vif <- as.data.frame(all_vif_matrices[["Offense Grades"]])
+off_yards_vif <- as.data.frame(all_vif_matrices[["Offense Yards"]])
+off_completions_vif <- as.data.frame(all_vif_matrices[["Offense Completions"]])
+def_stops_vif <- as.data.frame(all_vif_matrices[["Defense Stops"]])
+def_grades_vif <- as.data.frame(all_vif_matrices[["Defense Grades"]])
+def_tackles_vif <- as.data.frame(all_vif_matrices[["Defense Tackles"]])
+
+# Create a directory for the VIF matrices if it doesn't exist
+if (!dir.exists("matrices2")) {
+  dir.create("matrices2")
+}
+
+# Write VIF matrices to CSV files
+write.csv(off_grades_vif, "matrices2/off_grades_vif.csv", row.names = TRUE)
+write.csv(off_yards_vif, "matrices2/off_yards_vif.csv", row.names = TRUE)
+write.csv(off_completions_vif, "matrices2/off_completions_vif.csv", row.names = TRUE)
+write.csv(def_stops_vif, "matrices2/def_stops_vif.csv", row.names = TRUE)
+write.csv(def_grades_vif, "matrices2/def_grades_vif.csv", row.names = TRUE)
+write.csv(def_tackles_vif, "matrices2/def_tackles_vif.csv", row.names = TRUE)
+
+cat("All VIF matrices saved to the 'matrices2' directory.\n")
+
+# Summary statistics for high VIF values (only for non-NA values)
+cat("\n--- VIF Summary Statistics ---\n")
+for (dataset_name in names(all_vif_matrices)) {
+  vif_matrix <- all_vif_matrices[[dataset_name]]
+  
+  cat("\nDataset:", dataset_name, "\n")
+  
+  # Skip completely empty matrices
+  if (all(is.na(vif_matrix))) {
+    cat("All VIF values are NA. Skipping summary.\n")
+    next
+  }
+  
+  # Count high VIF values (> 10) for each model type
+  high_vif_counts <- apply(vif_matrix, 2, function(x) sum(x > 10, na.rm = TRUE))
+  very_high_vif_counts <- apply(vif_matrix, 2, function(x) sum(x > 30, na.rm = TRUE))
+  
+  cat("Variables with VIF > 10 in each model:\n")
+  for (i in 1:length(high_vif_counts)) {
+    cat("  ", colnames(vif_matrix)[i], ":", high_vif_counts[i], "\n")
+  }
+  
+  cat("Variables with VIF > 30 in each model:\n")
+  for (i in 1:length(very_high_vif_counts)) {
+    cat("  ", colnames(vif_matrix)[i], ":", very_high_vif_counts[i], "\n")
+  }
+  
+  # Find max VIF for each model (handling NA values and potential empty columns)
+  max_vifs <- apply(vif_matrix, 2, function(x) {
+    if (all(is.na(x))) {
+      return(NA)
+    } else {
+      return(max(x, na.rm = TRUE))
+    }
+  })
+  
+  cat("Maximum VIF value in each model:\n")
+  for (i in 1:length(max_vifs)) {
+    if (is.na(max_vifs[i]) || is.infinite(max_vifs[i])) {
+      cat("  ", colnames(vif_matrix)[i], ": No valid VIF values\n")
+    } else {
+      cat("  ", colnames(vif_matrix)[i], ":", round(max_vifs[i], 2), "\n")
+    }
+  }
+  
+  # If there are high VIF values, identify the top 5 variables with highest VIF
+  for (i in 1:ncol(vif_matrix)) {
+    col_vals <- vif_matrix[, i]
+    if (sum(!is.na(col_vals)) > 0 && max(col_vals, na.rm = TRUE) > 5) {
+      # Sort VIF values for this column
+      sorted_idx <- order(col_vals, decreasing = TRUE, na.last = TRUE)
+      top_vars <- head(sorted_idx, 5)
+      
+      cat("\nTop 5 variables with highest VIF in", colnames(vif_matrix)[i], ":\n")
+      for (j in 1:length(top_vars)) {
+        if (!is.na(col_vals[top_vars[j]])) {
+          cat("  ", rownames(vif_matrix)[top_vars[j]], ":", 
+              round(col_vals[top_vars[j]], 2), "\n")
+        }
+      }
+    }
+  }
+}
+```
