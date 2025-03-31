@@ -499,25 +499,21 @@ create_dataset_table <- function(dataset_index) {
     return(paste("No results available for", dataset_name))
   }
   
-  # Pre-define the full set of row labels
+  # Pre-define the full set of row labels - FIXED to remove duplicate model names
   row_labels <- c(
-    # LPM Section
-    "LPM Model",
+    # LPM Section (no model name in actual rows, only in pack_rows)
     tracked_var_display[1],  # Punter variable
     tracked_var_display[2],  # Kicker variable
     
-    # Probit Section
-    "Probit Model",
+    # Probit Section (no model name in actual rows, only in pack_rows)
     tracked_var_display[1],
     tracked_var_display[2],
     
-    # Logit Section
-    "Logit Model",
+    # Logit Section (no model name in actual rows, only in pack_rows)
     tracked_var_display[1],
     tracked_var_display[2],
     
     # Controls Section
-    "Controls",
     "Game Situation",
     "Environmental",
     "Coach Variables",
@@ -563,8 +559,6 @@ create_dataset_table <- function(dataset_index) {
   )
   
   if (length(missing_controls) > 0) {
-    # cat("Adding missing control fields to dataset_controls:", 
-      # paste(missing_controls, collapse=", "), "\n")
     for (ctrl in missing_controls) {
       # Default missing controls to FALSE except player_presence (TRUE)
       dataset_controls[[ctrl]] <- if(ctrl == "player_presence") TRUE else FALSE
@@ -585,44 +579,43 @@ create_dataset_table <- function(dataset_index) {
     
     # Fill in values for this yardline column
     if (has_valid_results) {
-      # Model results sections
-      df[2, yardline] <- format_tval(lpm_results["punter"])
-      df[3, yardline] <- format_tval(lpm_results["kicker"])
-      df[5, yardline] <- format_tval(probit_results["punter"])
-      df[6, yardline] <- format_tval(probit_results["kicker"])
-      df[8, yardline] <- format_tval(logit_results["punter"])
-      df[9, yardline] <- format_tval(logit_results["kicker"])
+      # Model results sections - directly use the variable names without repeating model names
+      # Adjusting indices to match the new row structure (removed model name rows)
+      df[1, yardline] <- format_tval(lpm_results["punter"])
+      df[2, yardline] <- format_tval(lpm_results["kicker"])
+      df[3, yardline] <- format_tval(probit_results["punter"])
+      df[4, yardline] <- format_tval(probit_results["kicker"])
+      df[5, yardline] <- format_tval(logit_results["punter"])
+      df[6, yardline] <- format_tval(logit_results["kicker"])
       
-      # Control variables section - handle each control separately to avoid vector length errors
-      df[11, yardline] <- "Game Situation"  # Section header (placeholder)
-      df[12, yardline] <- if(dataset_controls$game_situation) "Yes" else "No"
-      df[13, yardline] <- if(dataset_controls$environmental) "Yes" else "No"
-      df[14, yardline] <- if(dataset_controls$coach) "Yes" else "No"
-      df[15, yardline] <- if(dataset_controls$team_stats) "Yes" else "No"
-      df[16, yardline] <- if(dataset_controls$player_vars) "Yes" else "No"
-      df[17, yardline] <- if(dataset_controls$player_presence) "Yes" else "No"
-      df[18, yardline] <- if(dataset_controls$team_fe) "Yes" else "No"
-      df[19, yardline] <- if(dataset_controls$coach_fe) "Yes" else "No"
+      # Control variables section - adjusting indices
+      df[7, yardline] <- if(dataset_controls$game_situation) "Yes" else "No"
+      df[8, yardline] <- if(dataset_controls$environmental) "Yes" else "No"
+      df[9, yardline] <- if(dataset_controls$coach) "Yes" else "No"
+      df[10, yardline] <- if(dataset_controls$team_stats) "Yes" else "No"
+      df[11, yardline] <- if(dataset_controls$player_vars) "Yes" else "No"
+      df[12, yardline] <- if(dataset_controls$player_presence) "Yes" else "No"
+      df[13, yardline] <- if(dataset_controls$team_fe) "Yes" else "No"
+      df[14, yardline] <- if(dataset_controls$coach_fe) "Yes" else "No"
       
       # Sample Size
-      df[20, yardline] <- format(lpm_results["n"], big.mark = ",")
+      df[15, yardline] <- format(lpm_results["n"], big.mark = ",")
     } else {
-      # Fill with placeholders
-      df[c(2, 3, 5, 6, 8, 9), yardline] <- "---"
-      df[11, yardline] <- "Game Situation"  # Section header (placeholder)
-      df[12, yardline] <- "No"
+      # Fill with placeholders - adjusting indices
+      df[c(1, 2, 3, 4, 5, 6), yardline] <- "---"
+      df[7, yardline] <- "No"
+      df[8, yardline] <- "No"
+      df[9, yardline] <- "No"
+      df[10, yardline] <- "No"
+      df[11, yardline] <- "No"
+      df[12, yardline] <- "Yes"  # Default player_presence to Yes
       df[13, yardline] <- "No"
       df[14, yardline] <- "No"
-      df[15, yardline] <- "No"
-      df[16, yardline] <- "No"
-      df[17, yardline] <- "Yes"  # Default player_presence to Yes
-      df[18, yardline] <- "No"
-      df[19, yardline] <- "No"
-      df[20, yardline] <- "---"
+      df[15, yardline] <- "---"
     }
   }
   
-  # Return the formatted table
+  # Return the formatted table using kable
   kable(df,
         format = "latex",
         booktabs = TRUE,
@@ -633,13 +626,14 @@ create_dataset_table <- function(dataset_index) {
       latex_options = c("scale_down", "striped", "hold_position"),
       font_size = 7
     ) %>%
-    pack_rows("LPM Model", 1, 3, label_row_css = "border-top: 2px solid;", 
+    # Adjusted pack_rows to match the new row structure
+    pack_rows("LPM Model", 1, 2, label_row_css = "border-top: 2px solid;", 
               latex_gap_space = "0.3em") %>%
-    pack_rows("Probit Model", 4, 6, label_row_css = "border-top: 1px solid;",
+    pack_rows("Probit Model", 3, 4, label_row_css = "border-top: 1px solid;",
               latex_gap_space = "0.3em") %>%
-    pack_rows("Logit Model", 7, 9, label_row_css = "border-top: 1px solid;",
+    pack_rows("Logit Model", 5, 6, label_row_css = "border-top: 1px solid;",
               latex_gap_space = "0.3em") %>%
-    pack_rows("Controls", 10, 19, label_row_css = "border-top: 1px solid; border-bottom: 2px solid",
+    pack_rows("Controls", 7, 15, label_row_css = "border-top: 1px solid; border-bottom: 2px solid",
               latex_gap_space = "0.3em") %>%
     footnote(
       general = c(
