@@ -477,11 +477,11 @@ create_game_metrics_table <- function(outcome_data, select_data) {
         
         # Pre-round all statistics to 1 decimal place
         col_stats <- c(
-          round(min(col_data, na.rm=TRUE), 1),
-          round(max(col_data, na.rm=TRUE), 1),
-          round(mean(col_data, na.rm=TRUE), 1),
-          round(median(col_data, na.rm=TRUE), 1),
-          round(sd(col_data, na.rm=TRUE), 1),
+          round(min(col_data, na.rm=TRUE), 2),
+          round(max(col_data, na.rm=TRUE), 2),
+          round(mean(col_data, na.rm=TRUE), 2),
+          round(median(col_data, na.rm=TRUE), 2),
+          round(sd(col_data, na.rm=TRUE), 2),
           round(zero_count, 1),
           if(length(non_zero_values) > 0) round(quantile(col_data, 0.05, na.rm=TRUE), 1) else NA,
           if(length(non_zero_values) > 0) round(quantile(col_data, 0.95, na.rm=TRUE), 1) else NA

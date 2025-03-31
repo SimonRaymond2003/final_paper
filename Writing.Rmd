@@ -64,6 +64,19 @@ Players from the PFF data set where merged into our base play by play data set b
 
 As a final note attendance data was also scrapped from pro football reference.
 
+
+```{r off-p-sum, fig.cap="Player Offensive Summary", out.width="100%"}
+knitr::include_graphics("table_images/sum1.png")
+```
+
+```{r def-p-sum, fig.cap="Player Defensive Summary", out.width="100%"}
+knitr::include_graphics("table_images/sum2.png")
+```
+
+```{r other-sum, fig.cap="Other Variable Summary", out.width="100%"}
+knitr::include_graphics("table_images/sum3.png")
+```
+
 # Variable Selection
 
 Our variables that we work with fall into one of two categories. They are either statistics about players or about the situation of the play. The player variables consist of variables that describe who was on the field. We also have access to player variables of the starting players on each team based on depth chart data provided by nflverse. In both situations the players are sorted into columns based on depth chart position. For example, the starting QB is also in the offense_player_1 slot to allow us to maintain consistancy. 
@@ -100,9 +113,9 @@ Model the binary choice to attempt a play:
 \end{cases}
 \end{equation}
 
-Predict attempt probability using Random Forest (RF):
+The probability is modeled as:
 \begin{equation}
-z_i = \text{RF}(\mathbf{X}_i)
+z_i = \text{RF}(\mathbf{X}_i, \mathbf{K}_i, \mathbf{P}_i)
 \end{equation}
 
 where:
@@ -112,11 +125,6 @@ where:
 \item $\mathbf{K}_i$: kicker grades (exogenous)
 \item $\mathbf{P}_i$: punter grades (exogenous)
 \end{itemize}
-
-The probability is modeled as:
-\begin{equation}
-z_i = \text{RF}(\mathbf{X}_i, \mathbf{K}_i, \mathbf{P}_i)
-\end{equation}
 
 The generalized inverse Mills ratio is:
 \begin{equation}
@@ -169,8 +177,6 @@ Models are estimated separately for offensive outcomes (grades, yards, completio
   
   When the kicker is not on the field during a fourth down they are unable to effect the decision making of the coaches or plays of the coaches, as there are no further decisions to be made. However in a third down situation we  find that kicker grades do have positive significance on the conversion of a third down. This significance, is soley found in the middle of the field, where the kicker is more likely to be used if the third down is not converted. In the situations on third down that would mirror a fourth down, there is no statistical significance. When the kicker is not apart of the decision making process on third down, similarly to fourth down, it does not have a effect on 3rd down conversion. 
   
-\newpage
-
 ```{r kicker-grades, fig.cap="Kicker Offensive Grades", out.width="100%"}
 knitr::include_graphics("table_images/kick1.png")
 ```
@@ -195,7 +201,7 @@ knitr::include_graphics("table_images/def1.png")
 
 ## GIMR
 
-In examining the following tables the significance of our GIMR is confirmed. This tells us that coaches in the NFL see factors that we cannot and act on them in the proper way. When a coach is more likly to attempt a fourth down conversion attempt that they are then also more likely to convert that fourth down attempt due to unseeen variables. 
+In examining the following tables the significance of our GIMR is confirmed. This tells us that coaches in the NFL see factors that we cannot and act on them in the proper way. When a coach is more likly to attempt a fourth down conversion attempt that they are then also more likely to convert that fourth down attempt due to unseen variables. 
 
 ## Players
 
@@ -209,13 +215,13 @@ The offensive and defensive models are both measured in three different ways. Fo
 
 To evaluate a coaches' decision making, the Attempt Models are able to show if a coach is properly deciding to Attempt a fourth down based on features of players that influence the conversion of a fourth down. 
 
-### Offensive Join Significance Tables
+### Offensive Player Joint Significance 
 
 ```{r offense-grades-model, fig.cap="Offense Grades Model Results", out.width="100%"}
 knitr::include_graphics("table_images/off2.png")
 ```
 
-### Defensive Join Significance Tables
+### Defensive Player Joint Significance 
 
 ```{r defense-grades-model, fig.cap="Defense Grades Model Results by Position Groups", out.width="100%"}
 knitr::include_graphics("table_images/def2.png")
@@ -237,16 +243,55 @@ What is the most interesting is that the Grades of the team's running back are n
 
 In terms of the defense there is not enough evidence to make statements about individual player features' significance. However, when we test for joint significance of the defensive players there is signs of significance with the Defensive Line and Corner backs in which the the coaches respond to.
 
-### Offensive Joint Significance
+### Offense Joint Significance
 
 ```{r off3, fig.cap="Joint Significance Offense", out.width="100%"}
 knitr::include_graphics("table_images/off3.png")
 ```
 
-\newpage
-
-### Defensive Joint Significance
+### Defense Joint Significance
 
 ```{r def3, fig.cap="Joint Significance Defense", out.width="100%"}
 knitr::include_graphics("table_images/def3.png")
 ```
+
+\newpage
+
+# References {.unnumbered}
+
+\label{cook2022}Cook, J. A. (2022). Sample-Selection-Adjusted Random Forests. International Journal of Data Science and Analytics, 14, 375-388.  http://dx.doi.org/10.2139/ssrn.4225014
+
+\label{das2003}Das, M., Newey, W. K., & Vella, F. (2003). Nonparametric estimation of sample selection models. The Review of Economic Studies, 70(1), 33-58. https://doi.org/10.1111/1467-937X.00236
+
+\label{gilovich1985}Gilovich, T., Vallone, R., & Tversky, A. (1985). The hot hand in basketball: On the misperception of random sequences. Cognitive Psychology, 17(3), 295-314. https://doi.org/10.1016/0010-0285(85)90010-6
+
+\label{goff2019}Goff, B. L., & Locke, C. (2019). Revisiting Romer: Digging Deeper Into Influences on NFL Managerial Decisions. Journal of Sports Economics, 20(5), 673-694. https://doi.org/10.1177/1527002518798686
+
+\label{heckman1979}Heckman, J. J. (1979). Sample Selection Bias as a Specification Error. Econometrica, 47(1), 153-161. https://doi.org/10.2307/1912352
+
+\label{klein1993}Klein, R. W., & Spady, R. H. (1993). An efficient semiparametric estimator for binary response models. Econometrica, 61(2), 387-421. https://doi.org/10.2307/2951556
+
+\label{lehman2013}Lehman, D. W., & Hahn, J. (2013). Momentum and Organizational Risk Taking: Evidence from the National Football League. Management Science, 59(4), 852-868. https://doi.org/10.1287/mnsc.1120.1574
+
+\label{losak2023}Losak, J. M., Stenquist, R., & Lovett, M. (2023). Behavioral Biases in Daily Fantasy Baseball: The Case of the Hot Hand. Journal of Sports Economics, 24(3), 352-372. https://doi.org/10.1177/15270025221128955
+
+\label{owens2018}Owens, M. F., & Roach, M. (2018). Decision-making on the hot seat and the short list: Evidence from college football fourth down decisions. Journal of Economic Behavior & Organization, 148, 226-245. https://doi.org/10.1016/j.jebo.2018.02.023
+
+\label{roebber2022}Roebber, P. J., Schultz, D. M., & Colle, B. A. (2022). On the existence of momentum in professional football. PLOS ONE, 17(6), e0269604. https://doi.org/10.1371/journal.pone.0269604
+
+\label{romer2006}Romer, D. (2006). Do Firms Maximize? Evidence from Professional Football. Journal of Political Economy, 114(2), 340-365. https://doi.org/10.1086/501171
+
+\label{yam2018}Yam, D., & Lopez, M. (2018). Quantifying the Causal Effects of Conservative Fourth Down Decision Making in the National Football League. Available at SSRN: https://ssrn.com/abstract=3114242 or http://dx.doi.org/10.2139/ssrn.3114242
+
+\label{carl2024}Carl, S., Baldwin, B., Sharpe, L., Ho, T., Edwards, J. (2024). nflverse. Play-by-play data for NFL games. Retrieved from [https://nflverse.nflverse.com/](https://nflverse.nflverse.com/).
+
+\label{pff2024}Pro Football Focus (PFF). (2024). NFL Player Performance Data. Accessed via subscription at [https://premium.pff.com/nfl/teams/2024/REGPO](https://premium.pff.com/nfl/teams/2024/REGPO).
+
+\label{raymond2024}Raymond, S. (2024). *4th Down Analysis App*. Interactive dashboard for analyzing 4th down decisions in the NFL. Available at: [https://jzmtko-yigit-aydede.shinyapps.io/NFL_4th_Down_App/](https://jzmtko-yigit-aydede.shinyapps.io/NFL_4th_Down_App/).
+
+\label{sportingnews2024}Sporting News. (2024). Lions' Dan Campbell criticized for fourth-down decisions in playoff loss to 49ers. Retrieved from [https://www.sportingnews.com/us/nfl/news/lions-49ers-dan-campbell-fourth-down-decisions/b54ce7cc05c4d55fc7b46285](https://www.sportingnews.com/us/nfl/news/lions-49ers-dan-campbell-fourth-down-decisions/b54ce7cc05c4d55fc7b46285).
+
+\label{davis2010}Davis, M. C., & End, C. M. (2010). A winning proposition: The economic impact of successful National Football League franchises. *Economic Inquiry*, 48(1), 39–50. https://doi.org/10.1111/j.1465-7295.2008.00124.x
+
+\label{birkett2023}Birkett, D. (2024, January 21). On this date: Memorable kneecap speech. Sports Illustrated. Retrieved from https://www.si.com/nfl/lions/news/on-this-date-memorable-kneecap-speech
+
