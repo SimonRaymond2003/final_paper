@@ -106,44 +106,44 @@ for(d in 1:length(ctd1_datasets)) {
 # Function to analyze data for one dataset and one yardline
 analyze_yardline <- function(dt, yardline_var) {
   if(is.null(dt)) {
-    print("Dataset is NULL")
+    # print("Dataset is NULL")
     return(NULL)
   }
   
   tryCatch({
-    print(paste("Analyzing yardline", yardline_var))
+    # print(paste("Analyzing yardline", yardline_var))
     
-    # Create yardline column name and print for debugging
+    # Create yardline column name - THIS LINE IS CRITICAL
     yardline_col <- paste0("yardline_", gsub("-", "_", yardline_var))
-    print(paste("Looking for yardline column:", yardline_col))
+    # print(paste("Looking for yardline column:", yardline_col))
     
     # Check if column exists
     if (!(yardline_col %in% names(dt))) {
-      print(paste("Column", yardline_col, "not found in data"))
+      # print(paste("Column", yardline_col, "not found in data"))
       return(NULL)
     }
     
     # Filter by yardline
     dt_filtered <- dt[dt[[yardline_col]] == 1]
-    print(paste("Rows after yardline filter:", nrow(dt_filtered)))
+    # print(paste("Rows after yardline filter:", nrow(dt_filtered)))
     
     if (nrow(dt_filtered) < 50) {
-      print("Not enough rows after filtering")
+      # print("Not enough rows after filtering")
       return(NULL)
     }
     
     # Check if tracked variables are present
     if (!all(tracked_vars %in% names(dt_filtered))) {
-      print("Missing required variables:")
-      print(paste("  -", tracked_vars[!(tracked_vars %in% names(dt_filtered))]))
+      # print("Missing required variables:")
+      # print(paste("  -", tracked_vars[!(tracked_vars %in% names(dt_filtered))]))
       return(NULL)
     } else {
-      print("Found all required variables")
+      # print("Found all required variables")
     }
     
     # Check if outcome variable exists
     if (!"conversion" %in% names(dt_filtered)) {
-      print("Missing outcome variable 'conversion'")
+      # print("Missing outcome variable 'conversion'")
       return(NULL)
     }
     
@@ -161,32 +161,32 @@ analyze_yardline <- function(dt, yardline_var) {
     
     # Check for any NA values in key variables
     na_check <- colSums(is.na(dt_filtered[, c("conversion", tracked_vars), with=FALSE]))
-    print("NA counts in key variables:")
-    print(na_check)
+    # print("NA counts in key variables:")
+    # print(na_check)
     
     # Remove NAs in key variables
     dt_filtered <- na.omit(dt_filtered, cols = c("conversion", tracked_vars))
-    print(paste("Rows after removing NAs:", nrow(dt_filtered)))
+    # print(paste("Rows after removing NAs:", nrow(dt_filtered)))
     
     # Remove columns that are all one value (perfect multicollinearity)
     vars_to_keep <- sapply(dt_filtered, function(x) length(unique(na.omit(x))) > 1)
     dt_filtered <- dt_filtered[, ..vars_to_keep]
-    print(paste("Columns after removing constant variables:", ncol(dt_filtered)))
+    # print(paste("Columns after removing constant variables:", ncol(dt_filtered)))
     
     # Check if our key variables still exist
     key_vars_exist <- all(c("conversion", tracked_vars) %in% names(dt_filtered))
-    print(paste("All key variables still present:", key_vars_exist))
+    # print(paste("All key variables still present:", key_vars_exist))
     
     if (!key_vars_exist) {
-      print("Key variables were removed - they may be constant")
-      print("Checking variables:")
+      # print("Key variables were removed - they may be constant")
+      # print("Checking variables:")
       for (var in c("conversion", tracked_vars)) {
         if (var %in% names(dt_filtered)) {
-          print(paste(var, "present"))
+          # print(paste(var, "present"))
         } else {
-          print(paste(var, "missing - checking uniqueness:"))
+          # print(paste(var, "missing - checking uniqueness:"))
           if (var %in% names(dt)) {
-            print(paste("Unique values in", var, ":", length(unique(na.omit(dt[[var]])))))
+            # print(paste("Unique values in", var, ":", length(unique(na.omit(dt[[var]])))))
           }
         }
       }
@@ -195,24 +195,24 @@ analyze_yardline <- function(dt, yardline_var) {
     
     # 1. Run LPM model with robust standard errors
     tryCatch({
-      print("Running LPM model")
+      # print("Running LPM model")
       
       # Fit model
       LPM_model <- lm(conversion ~ ., data = dt_filtered)
       
       # Print coefficient table for debugging
       model_coefs <- coef(summary(LPM_model))
-      print("LPM model coefficients for tracked variables:")
+      # print("LPM model coefficients for tracked variables:")
       if (tracked_vars[1] %in% rownames(model_coefs)) {
-        print(model_coefs[tracked_vars[1],])
+        # print(model_coefs[tracked_vars[1],])
       } else {
-        print(paste(tracked_vars[1], "not in model coefficients"))
+        # print(paste(tracked_vars[1], "not in model coefficients"))
       }
       
       if (tracked_vars[2] %in% rownames(model_coefs)) {
-        print(model_coefs[tracked_vars[2],])
+        # print(model_coefs[tracked_vars[2],])
       } else {
-        print(paste(tracked_vars[2], "not in model coefficients"))
+        # print(paste(tracked_vars[2], "not in model coefficients"))
       }
       
       # Get robust standard errors
@@ -238,16 +238,16 @@ analyze_yardline <- function(dt, yardline_var) {
       has_team_fe <- any(grepl("team_", model_vars)) || any(grepl("season_|year", model_vars))
       has_coach_fe <- any(grepl("^Chuck_|^Bruce_|^Sean_", model_vars))
       
-      print("Control variables present:")
-      print(paste("Game situation:", has_game_situation))
-      print(paste("Environmental:", has_environmental))
-      print(paste("Coach:", has_coach))
-      print(paste("Team stats:", has_team_stats))
-      print(paste("Player vars:", has_player_vars))
-      print(paste("Team FE:", has_team_fe))
-      print(paste("Coach FE:", has_coach_fe))
+      # print("Control variables present:")
+      # print(paste("Game situation:", has_game_situation))
+      # print(paste("Environmental:", has_environmental))
+      # print(paste("Coach:", has_coach))
+      # print(paste("Team stats:", has_team_stats))
+      # print(paste("Player vars:", has_player_vars))
+      # print(paste("Team FE:", has_team_fe))
+      # print(paste("Coach FE:", has_coach_fe))
     }, error = function(e) {
-      print(paste("Error in LPM model:", e$message))
+      # print(paste("Error in LPM model:", e$message))
       results$lpm[[1]] <- NA
       results$lpm[[2]] <- NA
       has_game_situation <- FALSE
@@ -261,13 +261,13 @@ analyze_yardline <- function(dt, yardline_var) {
     
     # 2. Run Probit model
     tryCatch({
-      print("Running Probit model")
+      # print("Running Probit model")
       
       # Fit model - limit to prevent convergence issues
       max_vars <- min(ncol(dt_filtered) - 1, nrow(dt_filtered) / 10)
       
       if (ncol(dt_filtered) > max_vars + 1) {
-        print(paste("Too many variables, limiting to", max_vars))
+        # print(paste("Too many variables, limiting to", max_vars))
         # Keep tracked variables and add others up to max_vars
         keep_vars <- c("conversion", tracked_vars)
         other_vars <- setdiff(names(dt_filtered), keep_vars)
@@ -299,14 +299,14 @@ analyze_yardline <- function(dt, yardline_var) {
         robust_test_probit[tracked_vars[2], "z value"]
       } else NA
     }, error = function(e) {
-      print(paste("Error in Probit model:", e$message))
+      # print(paste("Error in Probit model:", e$message))
       results$probit[[1]] <- NA
       results$probit[[2]] <- NA
     })
     
     # 3. Run Logit model
     tryCatch({
-      print("Running Logit model")
+      # print("Running Logit model")
       
       # Use the same dataset as for Probit
       logit_formula <- as.formula("conversion ~ .")
@@ -326,7 +326,7 @@ analyze_yardline <- function(dt, yardline_var) {
         robust_test_logit[tracked_vars[2], "z value"]
       } else NA
     }, error = function(e) {
-      print(paste("Error in Logit model:", e$message))
+      # print(paste("Error in Logit model:", e$message))
       results$logit[[1]] <- NA
       results$logit[[2]] <- NA
     })
@@ -348,48 +348,64 @@ analyze_yardline <- function(dt, yardline_var) {
     
     return(results)
   }, error = function(e) {
-    print(paste("Error in analyze_yardline:", e$message))
+    # print(paste("Error in analyze_yardline:", e$message))
     return(NULL)
   })
 }
 ```
 
+```{r process_data, warning=FALSE, message=FALSE}
+# Load and process all datasets first
+all_data <- list()
+for(d in 1:length(ctd1_datasets)) {
+  dataset_path <- ctd1_datasets[d]
+  
+  if(file.exists(dataset_path)) {
+    dt <- fread(dataset_path)
+    all_data[[d]] <- dt
+  } else {
+    all_data[[d]] <- NULL
+  }
+}
+names(all_data) <- dataset_names
+```
+
 ```{r run_analysis, warning=FALSE, message=FALSE}
 # Process each dataset with detailed output
 for (d in 1:length(ctd1_datasets)) {
-  print(paste("\nProcessing", dataset_names[d]))
+   print(paste("\nProcessing", dataset_names[d]))
   dt <- all_data[[d]]
   
   if(is.null(dt)) {
-    print("Skipping - no data loaded")
+    # print("Skipping - no data loaded")
     next
   }
   
   # Check each yardline and save results
   for (yl in 1:length(yardline_ranges)) {
     yardline_var <- yardline_ranges[yl]
-    cat("\n------------------------------------------------------\n")
-    cat(paste("DATASET:", dataset_names[d], "| YARDLINE:", yardline_var, "\n"))
-    cat("------------------------------------------------------\n")
-    
+    # cat("\n------------------------------------------------------\n")
+    # cat(paste("DATASET:", dataset_names[d], "| YARDLINE:", yardline_var, "\n"))
+    # cat("------------------------------------------------------\n")
+    # 
     # Run analysis
     result <- analyze_yardline(dt, yardline_var)
     
     # Store results for all three model types
     if (!is.null(result)) {
-      # Log key results
-      cat("\nRESULTS SUMMARY:\n")
-      cat("Sample size:", result$n, "\n")
-      cat("LPM t-values:", 
-          paste(tracked_var_display[1], "=", round(result$lpm[[1]], 3)), 
-          paste(tracked_var_display[2], "=", round(result$lpm[[2]], 3)), "\n")
-      cat("Probit z-values:", 
-          paste(tracked_var_display[1], "=", round(result$probit[[1]], 3)), 
-          paste(tracked_var_display[2], "=", round(result$probit[[2]], 3)), "\n")
-      cat("Logit z-values:", 
-          paste(tracked_var_display[1], "=", round(result$logit[[1]], 3)), 
-          paste(tracked_var_display[2], "=", round(result$logit[[2]], 3)), "\n")
-      
+      # # Log key results
+      # cat("\nRESULTS SUMMARY:\n")
+      # cat("Sample size:", result$n, "\n")
+      # cat("LPM t-values:", 
+      #     paste(tracked_var_display[1], "=", round(result$lpm[[1]], 3)), 
+      #     paste(tracked_var_display[2], "=", round(result$lpm[[2]], 3)), "\n")
+      # cat("Probit z-values:", 
+      #     paste(tracked_var_display[1], "=", round(result$probit[[1]], 3)), 
+      #     paste(tracked_var_display[2], "=", round(result$probit[[2]], 3)), "\n")
+      # cat("Logit z-values:", 
+      #     paste(tracked_var_display[1], "=", round(result$logit[[1]], 3)), 
+      #     paste(tracked_var_display[2], "=", round(result$logit[[2]], 3)), "\n")
+      # 
       # Store LPM results
       all_results[[d]][["lpm"]][[yl]] <- c(
         punter = as.numeric(result$lpm[[1]]), 
@@ -421,8 +437,8 @@ for (d in 1:length(ctd1_datasets)) {
         )
         
         if (length(missing_controls) > 0) {
-          print(paste("Adding missing control fields:", 
-                paste(missing_controls, collapse=", ")))
+          # print(paste("Adding missing control fields:", 
+          #       paste(missing_controls, collapse=", ")))
           for (ctrl in missing_controls) {
             # Default missing controls to FALSE except player_presence (TRUE)
             result$controls[[ctrl]] <- if(ctrl == "player_presence") TRUE else FALSE
@@ -432,7 +448,7 @@ for (d in 1:length(ctd1_datasets)) {
         control_info[[d]] <- result$controls
       }
     } else {
-      cat("\nNo results returned for this yardline\n")
+      # cat("\nNo results returned for this yardline\n")
       
       # Set all model types to NA
       all_results[[d]][["lpm"]][[yl]] <- c(punter = NA_real_, kicker = NA_real_, n = 0)
@@ -444,21 +460,21 @@ for (d in 1:length(ctd1_datasets)) {
 
 # Verify the structure of control_info
 for (d in 1:length(dataset_names)) {
-  print(paste("Control info for", dataset_names[d]))
+  # print(paste("Control info for", dataset_names[d]))
   if (!is.null(control_info[[d]])) {
-    print(control_info[[d]])
+    # print(control_info[[d]])
     # Make sure all needed fields are present
     needed_fields <- c("game_situation", "environmental", "coach", "team_stats", 
                      "player_vars", "player_presence", "team_fe", "coach_fe")
     for (field in needed_fields) {
       if (!(field %in% names(control_info[[d]]))) {
-        print(paste("Adding missing control field:", field))
+        # print(paste("Adding missing control field:", field))
         # Default to FALSE for all except player_presence (TRUE)
         control_info[[d]][[field]] <- if(field == "player_presence") TRUE else FALSE
       }
     }
   } else {
-    print("No control info available")
+    # print("No control info available")
   }
 }
 ```
@@ -547,8 +563,8 @@ create_dataset_table <- function(dataset_index) {
   )
   
   if (length(missing_controls) > 0) {
-    cat("Adding missing control fields to dataset_controls:", 
-      paste(missing_controls, collapse=", "), "\n")
+    # cat("Adding missing control fields to dataset_controls:", 
+      # paste(missing_controls, collapse=", "), "\n")
     for (ctrl in missing_controls) {
       # Default missing controls to FALSE except player_presence (TRUE)
       dataset_controls[[ctrl]] <- if(ctrl == "player_presence") TRUE else FALSE
