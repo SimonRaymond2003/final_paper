@@ -63,8 +63,8 @@ tracked_var_display <- c(
 )
 
 # Yardline ranges - using hyphens instead of underscores to avoid LaTeX issues
-yardline_ranges <- c("1-10", "11-20", "21-30", "31-40", "41-50", 
-                   "51-60", "61-70", "71-80", "81-90", "91-100")
+yardline_ranges <- c("Own 1-10", "Own 11-20", "Own 21-30", "Own 31-40", "Own 41-50", 
+                   "Opp. 49-40", "Opp. 39-30", "Opp. 29-20", "Opp. 19-10", "Opp. 9-1")
 
 # Store results for each dataset and model type
 # Structure: list[dataset_index][model_type][yardline_index][variable_index]
@@ -112,9 +112,20 @@ analyze_yardline <- function(dt, yardline_var) {
   
   tryCatch({
     # print(paste("Analyzing yardline", yardline_var))
-    
+    yardline_mapping <- list(
+  "Own 1-10" = "1_10",
+  "Own 11-20" = "11_20",
+  "Own 21-30" = "21_30", 
+  "Own 31-40" = "31_40",
+  "Own 41-50" = "41_50",
+  "Opp. 49-40" = "51_60", 
+  "Opp. 39-30" = "61_70",
+  "Opp. 29-20" = "71_80",
+  "Opp. 19-10" = "81_90",
+  "Opp. 9-1" = "91_100"
+)
     # Create yardline column name - THIS LINE IS CRITICAL
-    yardline_col <- paste0("yardline_", gsub("-", "_", yardline_var))
+    yardline_col <- paste0("yardline_", yardline_mapping[[yardline_var]])
     # print(paste("Looking for yardline column:", yardline_col))
     
     # Check if column exists
