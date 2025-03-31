@@ -630,17 +630,17 @@ create_dataset_table <- function(dataset_index) {
         align = c("l", rep("c", length(yardline_ranges))),
         escape = TRUE) %>%
     kable_styling(
-      latex_options = c("striped", "hold_position"),
+      latex_options = c("scale_down", "striped", "hold_position"),
       font_size = 7
     ) %>%
     pack_rows("LPM Model", 1, 3, label_row_css = "border-top: 2px solid;", 
-              latex_gap_space = "0.6em") %>%
+              latex_gap_space = "0.3em") %>%
     pack_rows("Probit Model", 4, 6, label_row_css = "border-top: 1px solid;",
-              latex_gap_space = "0.6em") %>%
+              latex_gap_space = "0.3em") %>%
     pack_rows("Logit Model", 7, 9, label_row_css = "border-top: 1px solid;",
-              latex_gap_space = "0.6em") %>%
+              latex_gap_space = "0.3em") %>%
     pack_rows("Controls", 10, 19, label_row_css = "border-top: 1px solid; border-bottom: 2px solid",
-              latex_gap_space = "0.6em") %>%
+              latex_gap_space = "0.3em") %>%
     footnote(
       general = c(
         "Values shown are t-statistics from respective model regressions with conversion as the dependent variable",
