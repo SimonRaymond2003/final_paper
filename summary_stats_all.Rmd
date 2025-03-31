@@ -167,14 +167,14 @@ def_grades_select <- transform_column_names(def_grades_select)
 
 ```{r print_data}
 # #print the colnames and str of all 4 data sets
-# print(colnames(off_grades_outcome))
-# print(str(off_grades_outcome))
+print(colnames(off_grades_outcome))
+ print(str(off_grades_outcome))
 # print(colnames(off_grades_select))
 # print(str(off_grades_select))
 # print(colnames(def_grades_outcome))
 # print(str(def_grades_outcome))
-# print(colnames(def_grades_select))
-# print(str(def_grades_select))
+ print(colnames(def_grades_select))
+print(str(def_grades_select))
 ```
 
 ```{r advanced_summaries, results='asis'}

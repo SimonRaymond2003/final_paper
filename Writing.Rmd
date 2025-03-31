@@ -9,7 +9,7 @@ knitr::opts_chunk$set(echo=FALSE)
 
 # Context
 
-The National Football League is a multi-billion dollar industry that has seen rapid growth within the American and International entertainment . This growth has placed more and more importance on the performance of NFL teams as they fight to win games to increase the popularity of their team as Davis and End (2010) argue that successful NFL franchises have measurable economic impacts on their local areas. This revelation has given rise to a age of data analytics in the NFL as teams seek to gain competitive advantages over their rivals. GMs and coaches then explore different avenues of strategies.
+The National Football League is a multi-billion dollar industry that has seen rapid growth within the American and International entertainment. This growth has placed more and more importance on the performance of NFL teams as they fight to win games to increase the popularity of their team as Davis and End (2010) argue that successful NFL franchises have measurable economic impacts on their local areas. This revelation has given rise to a age of data analytics in the NFL as teams seek to gain competitive advantages over their rivals. GMs and coaches then explore different avenues of strategies.
 
 In the NFL, a team's offensive possession is structured around a series of four "downs" where they attempt to advance the ball at least 10 yards to earn a new set of downs and maintain possession. When a team reaches fourth down without achieving the needed yardage, they face a pivotal decision. Teams typically choose between three options: punt the ball to establish favorable field position for their defense, attempt a field goal if within reasonable range (worth 3 points), or "go for it" by running an offensive play to try and gain the required yardage. For many years in the NFL there seemed to be a consistent standard that when faced with a fourth down your team will kick a field goal or punt the ball for better field position. The only exception being the dying moments in a game when teams are desperate for a miracle. 
 
@@ -65,17 +65,10 @@ Players from the PFF data set where merged into our base play by play data set b
 As a final note attendance data was also scrapped from pro football reference.
 
 
-```{r off-p-sum, fig.cap="Player Offensive Summary", out.width="100%"}
+```{r off-p-sum, fig.cap="Key Data Summary", out.width="100%"}
 knitr::include_graphics("table_images/sum1.png")
 ```
 
-```{r def-p-sum, fig.cap="Player Defensive Summary", out.width="100%"}
-knitr::include_graphics("table_images/sum2.png")
-```
-
-```{r other-sum, fig.cap="Other Variable Summary", out.width="100%"}
-knitr::include_graphics("table_images/sum3.png")
-```
 
 # Variable Selection
 
@@ -131,6 +124,12 @@ The generalized inverse Mills ratio is:
 \lambda_i = \frac{z_i}{1-z_i}
 \end{equation}
 
+```{r, out.width="100%"}
+knitr::include_graphics("function_plot.png")
+```
+
+This functional form shifts the weights to emphasis situations where the probability of attempting a play is close to 1.
+
 The first and second order conditions for $\lambda_i$ are:
 \begin{align*}
 \text{FOC: } \frac{\partial \lambda_i}{\partial z_i} &= \frac{1}{(1-z_i)^2} > 0 \text{ for } z_i < 1 \\
@@ -171,17 +170,23 @@ Models are estimated separately for offensive outcomes (grades, yards, completio
 
 # Findings 
 
-  A key feature in our sample selection correction model, is the exogeniety of a variable that influences the selection equation. In American Football there is the luxery of using third down conversions as a selection bias free area. This is due to how conditions such as desperation or play calling cause a 3rd down to be treated similarly to a fourth down by the coaches. A fourth down is a teams last attempt for that offensive drive. While not in all, there are many cases of third down provide the similar conditions in terms of the coaches decision making. For example if the ball is on a teams own 20 yard line and they are on 3rd and 10, the coach will treat this attempt as a "last chance". 
+  A key feature in our sample selection correction model, is the exogeniety of a variable that influences the selection equation. In American Football there is the luxery of using third down conversions as a selection bias free area. This is due to how conditions such as desperation or play calling cause a 3rd down to be treated similarly to a fourth down by the coaches. A fourth down is a teams last attempt for that offensive drive. While not in all, there are many cases of third down provide the similar conditions in terms of the coaches decision making. For example if the ball is on a teams own 20 yard line and they are on 3rd and 10, the coach will treat this attempt as a "last chance". This is due to the fact that if the team does not convert on 3rd down they will be forced to punt the ball. There is no situation here where the team can even consider kicking a field goal.
 
   We can first note that the grades of a teams kicker is positively significant in it's effect on the decision to attempt a fourth down. Exogenity of the kicker is now required in the case of the outcome of fourth downs. 
   
-  When the kicker is not on the field during a fourth down they are unable to effect the decision making of the coaches or plays of the coaches, as there are no further decisions to be made. However in a third down situation we  find that kicker grades do have positive significance on the conversion of a third down. This significance, is soley found in the middle of the field, where the kicker is more likely to be used if the third down is not converted. In the situations on third down that would mirror a fourth down, there is no statistical significance. When the kicker is not apart of the decision making process on third down, similarly to fourth down, it does not have a effect on 3rd down conversion. 
+  When the kicker is not on the field during a fourth down they are unable to effect the decision making of the coaches or plays of the coaches, as there are no further decisions to be made. In a Third down situation we find that kicker grades do have positive significance on the conversion of a third down. This significance, is soley found in the middle of the field, where the kicker is more likely to be used if the third down is not converted. In the situations on third down that would mirror a fourth down, there is no statistical significance. When the kicker is not apart of the decision making process on third down, similarly to fourth down, it does not have a effect on 3rd down conversion. 
   
 ```{r kicker-grades, fig.cap="Kicker Offensive Grades", out.width="100%"}
 knitr::include_graphics("table_images/kick1.png")
 ```
 
 This significance of the kicker and punter grades in key area of the field is due to the coaches being able to properly adjust their decision making for whether or not to attempt a fourth down. This is to say that coaches are properly recognizing how good or bad both their punters and kicker are and making adjustments on their playcalling. 
+
+```{r kicker-plot, fig.cap="Kicker Plot", out.width="100%"}
+knitr::include_graphics("table_images/kick2.png")
+```
+
+As a note while punters do not show signs of significantly affecting the 4th down attempt probability, they are included. The logic for them remains the same as the kickers and therefore there is no harm in including them in the selection model. 
 
 \newpage
 

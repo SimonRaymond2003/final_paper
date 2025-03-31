@@ -1,0 +1,483 @@
+---
+title: "gimr"
+output: pdf_document
+date: "2025-03-31"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Set up the PNG file
+png(filename = "function_plot.png", width = 800, height = 600)
+
+# Define the range for z (avoiding z = 1 which is the asymptote)
+z <- seq(0, 0.99, by = 0.01)
+
+# Calculate the function values
+f_z <- z / (1 - z)
+
+# Create the plot
+plot(z, f_z, type = "l", col = "blue", lwd = 2,
+     main = "Plot of f(z) = z/(1-z) for z from 0 to 1",
+     xlab = "z", ylab = "f(z)",
+     xlim = c(0, 1), ylim = c(0, 100))
+
+# Add a grid for better readability
+grid()
+
+# Add a vertical line at z = 1 to indicate the asymptote
+abline(v = 1, lty = 2, col = "red")
+
+# Add explanatory text
+text(0.7, 80, "Vertical asymptote at z = 1", col = "red")
+
+# Print confirmation message
+cat("Plot saved as 'function_plot.png' in", getwd(), "\n")
+```
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(ggpubr)
+library(extrafont)
+library(showtext)
+
+# Add some modern fonts
+font_add_google("Roboto", "roboto")
+font_add_google("Montserrat", "montserrat")
+showtext_auto()
+
+# Create a modern football field visualization of kicker exogeneity - TALLER VERSION
+create_modern_football_exogeneity_viz <- function() {
+  # Set up the base plot with a football field appearance
+  field_plot <- ggplot() +
+    theme_void() +
+    xlim(0, 100) +
+    ylim(0, 120) +  # Increased height from 100 to 120
+    theme(
+      plot.background = element_rect(fill = "#F5F5F7"),
+      plot.margin = margin(25, 20, 25, 20),  # Increased top and bottom margins
+      text = element_text(family = "montserrat")
+    )
+  
+  # Add a subtle pattern/texture to the background
+  for (i in seq(5, 95, by = 5)) {
+    field_plot <- field_plot + 
+      annotate("segment", x = i, y = 0, xend = i, yend = 120, 
+               color = "#EEEEEE", size = 0.3)
+  }
+  for (i in seq(5, 115, by = 5)) {  # Extended grid lines vertically
+    field_plot <- field_plot + 
+      annotate("segment", x = 0, y = i, xend = 100, yend = i, 
+               color = "#EEEEEE", size = 0.3)
+  }
+  
+  # Add field markings with modern styling
+  field_plot <- field_plot +
+    # Field background with gradient - positioned lower to have more space at top
+    annotate("rect", xmin = 10, xmax = 90, ymin = 20, ymax = 85, 
+             fill = "#4AA02C", color = NA, alpha = 0.7) +
+    
+    # Yard lines - repositioned
+    annotate("segment", x = 10, y = 20, xend = 10, yend = 85, color = "white", size = 1) +
+    annotate("segment", x = 90, y = 20, xend = 90, yend = 85, color = "white", size = 1) +
+    annotate("segment", x = 20, y = 20, xend = 20, yend = 85, color = "white", size = 0.5) +
+    annotate("segment", x = 30, y = 20, xend = 30, yend = 85, color = "white", size = 0.5) +
+    annotate("segment", x = 40, y = 20, xend = 40, yend = 85, color = "white", size = 0.5) +
+    annotate("segment", x = 50, y = 20, xend = 50, yend = 85, color = "white", size = 1) +
+    annotate("segment", x = 60, y = 20, xend = 60, yend = 85, color = "white", size = 0.5) +
+    annotate("segment", x = 70, y = 20, xend = 70, yend = 85, color = "white", size = 0.5) +
+    annotate("segment", x = 80, y = 20, xend = 80, yend = 85, color = "white", size = 0.5) +
+    
+    # End zones with gradient - repositioned
+    annotate("rect", xmin = 0, xmax = 10, ymin = 20, ymax = 85, 
+             fill = "#D62728", alpha = 0.8) +
+    annotate("rect", xmin = 90, xmax = 100, ymin = 20, ymax = 85, 
+             fill = "#1F77B4", alpha = 0.8) +
+    
+    # Modern field labels - repositioned
+    annotate("text", x = 5, y = 52.5, label = "END ZONE", color = "white", 
+             size = 3.2, angle = 90, fontface = "bold", family = "montserrat") +
+    annotate("text", x = 15, y = 15, label = "OWN 10", color = "#444444", 
+             size = 2.8, family = "roboto") +
+    annotate("text", x = 25, y = 15, label = "OWN 25", color = "#444444", 
+             size = 2.8, family = "roboto") +
+    annotate("text", x = 50, y = 15, label = "MIDFIELD", color = "#444444", 
+             size = 3.2, fontface = "bold", family = "montserrat") +
+    annotate("text", x = 75, y = 15, label = "OPP 25", color = "#444444", 
+             size = 2.8, family = "roboto") +
+    annotate("text", x = 85, y = 15, label = "OPP 10", color = "#444444", 
+             size = 2.8, family = "roboto") +
+    annotate("text", x = 95, y = 52.5, label = "END ZONE", color = "white", 
+             size = 3.2, angle = 90, fontface = "bold", family = "montserrat")
+  
+  # Add title with modern styling - moved higher
+  field_plot <- field_plot +
+    annotate("text", x = 50, y = 115, 
+             label = "Kicker Exogeneity by Field Position and Down", 
+             size = 5.2, hjust = 0.5, vjust = 0.5, fontface = "bold", 
+             family = "montserrat", color = "#333333")
+  
+  # Add field position zones with gradient transparency - repositioned
+  field_plot <- field_plot +
+    # Too far zone (own territory)
+    annotate("rect", xmin = 10, xmax = 35, ymin = 20, ymax = 85, 
+             fill = "#60BD68", alpha = 0.2, color = NA) +
+    # Middle field zone
+    annotate("rect", xmin = 35, xmax = 65, ymin = 20, ymax = 85, 
+             fill = "#FAA43A", alpha = 0.2, color = NA) +
+    # Too close zone (opponent territory/red zone)
+    annotate("rect", xmin = 65, xmax = 90, ymin = 20, ymax = 85, 
+             fill = "#60BD68", alpha = 0.2, color = NA)
+  
+  # Add modern zone labels with rounded corners - repositioned
+  field_plot <- field_plot +
+    # Too far zone label
+    annotate("rect", xmin = 10, xmax = 35, ymin = 86, ymax = 92, 
+             fill = "#60BD68", alpha = 0.8, color = NA) +
+    annotate("text", x = 22.5, y = 89, label = "TOO FAR FOR FG", 
+             color = "white", fontface = "bold", size = 3.2, family = "montserrat") +
+    
+    # Middle field zone label
+    annotate("rect", xmin = 35, xmax = 65, ymin = 86, ymax = 92, 
+             fill = "#FAA43A", alpha = 0.8, color = NA) +
+    annotate("text", x = 50, y = 89, label = "POTENTIAL FG RANGE", 
+             color = "white", fontface = "bold", size = 3.2, family = "montserrat") +
+    
+    # Too close zone label
+    annotate("rect", xmin = 65, xmax = 90, ymin = 86, ymax = 92, 
+             fill = "#60BD68", alpha = 0.8, color = NA) +
+    annotate("text", x = 77.5, y = 89, label = "TD PRIORITY ZONE", 
+             color = "white", fontface = "bold", size = 3.2, family = "montserrat")
+  
+  # Add 3rd Down section with modern styling - repositioned with more space
+  field_plot <- field_plot +
+    # Background with shadow effect
+    annotate("rect", xmin = 15.8, xmax = 85.2, ymin = 39.8, ymax = 59.2, 
+             fill = "#00000022", color = NA) +
+    annotate("rect", xmin = 15, xmax = 85, ymin = 40, ymax = 59, 
+             fill = "white", color = NA, alpha = 0.95) +
+    
+    # Title - with more space
+    annotate("text", x = 50, y = 55, label = "3RD DOWN", 
+             color = "#5DA5DA", fontface = "bold", size = 4.2, family = "montserrat") +
+    
+    # Zone descriptions - with more space
+    annotate("text", x = 25, y = 50, label = "EXOGENOUS", 
+             color = "#60BD68", fontface = "bold", size = 3.6, family = "montserrat") +
+    annotate("text", x = 25, y = 45, label = "Kicker not relevant", 
+             color = "#444444", size = 2.8, family = "roboto") +
+    
+    annotate("text", x = 50, y = 50, label = "NOT EXOGENOUS", 
+             color = "#F15854", fontface = "bold", size = 3.6, family = "montserrat") +
+    annotate("text", x = 50, y = 45, label = "Affects future 4th down decision", 
+             color = "#444444", size = 2.8, family = "roboto") +
+    
+    annotate("text", x = 75, y = 50, label = "EXOGENOUS", 
+             color = "#60BD68", fontface = "bold", size = 3.6, family = "montserrat") +
+    annotate("text", x = 75, y = 45, label = "Kicker not relevant", 
+             color = "#444444", size = 2.8, family = "roboto")
+  
+  # Add 4th Down section with modern styling - repositioned with more space
+  field_plot <- field_plot +
+    # Background with shadow effect
+    annotate("rect", xmin = 15.8, xmax = 85.2, ymin = 23.8, ymax = 37.2, 
+             fill = "#00000022", color = NA) +
+    annotate("rect", xmin = 15, xmax = 85, ymin = 24, ymax = 37, 
+             fill = "white", color = NA, alpha = 0.95) +
+    
+    # Title - with more space
+    annotate("text", x = 50, y = 34, label = "4TH DOWN", 
+             color = "#F15854", fontface = "bold", size = 4.2, family = "montserrat") +
+    
+    # Consistent description across all zones - with more space
+    annotate("text", x = 50, y = 29, 
+             label = "KICKER ALWAYS EXOGENOUS IN 'GO FOR IT' SITUATIONS", 
+             color = "#60BD68", fontface = "bold", size = 3.2, family = "montserrat") +
+    annotate("text", x = 50, y = 26, 
+             label = "No future decisions after 4th down", 
+             color = "#444444", size = 2.8, family = "roboto")
+  
+  # Add explanation text with modern styling - split into two separate boxes with increased height
+  field_plot <- field_plot +
+    # 3rd down explanation box - taller and wider
+    annotate("rect", xmin = 12.8, xmax = 49.8, ymin = 93.8, ymax = 108.2, 
+             fill = "#00000022", color = NA) +
+    annotate("rect", xmin = 12, xmax = 49.5, ymin = 94, ymax = 108, 
+             fill = "#F8F8F8", color = NA, alpha = 0.9) +
+    
+    # 3rd down explanation text - more spaced out
+    annotate("text", x = 30.75, y = 106, 
+             label = "3RD DOWN:", 
+             size = 3.2, hjust = 0.5, vjust = 0.5, fontface = "bold", family = "montserrat", color = "#5DA5DA") +
+    annotate("text", x = 30.75, y = 102, 
+             label = "Kicker quality only matters", 
+             size = 3.0, hjust = 0.5, vjust = 0.5, family = "roboto", color = "#333333") +
+    annotate("text", x = 30.75, y = 99, 
+             label = "in middle field where it affects", 
+             size = 3.0, hjust = 0.5, vjust = 0.5, family = "roboto", color = "#333333") +
+    annotate("text", x = 30.75, y = 96, 
+             label = "future 4th down decisions", 
+             size = 3.0, hjust = 0.5, vjust = 0.5, family = "roboto", color = "#333333") +
+    
+    # 4th down explanation box - taller and wider
+    annotate("rect", xmin = 50.2, xmax = 88.2, ymin = 93.8, ymax = 108.2, 
+             fill = "#00000022", color = NA) +
+    annotate("rect", xmin = 50.5, xmax = 88, ymin = 94, ymax = 108, 
+             fill = "#F8F8F8", color = NA, alpha = 0.9) +
+    
+    # 4th down explanation text - more spaced out
+    annotate("text", x = 69.25, y = 106, 
+             label = "4TH DOWN:", 
+             size = 3.2, hjust = 0.5, vjust = 0.5, fontface = "bold", family = "montserrat", color = "#F15854") +
+    annotate("text", x = 69.25, y = 102, 
+             label = "Kicker is always exogenous", 
+             size = 3.0, hjust = 0.5, vjust = 0.5, family = "roboto", color = "#333333") +
+    annotate("text", x = 69.25, y = 99, 
+             label = "in 'go for it' situations because", 
+             size = 3.0, hjust = 0.5, vjust = 0.5, family = "roboto", color = "#333333") +
+    annotate("text", x = 69.25, y = 96, 
+             label = "no future downs remain", 
+             size = 3.0, hjust = 0.5, vjust = 0.5, family = "roboto", color = "#333333")
+  
+  # Add footer with more subtle styling - repositioned
+  field_plot <- field_plot +
+    annotate("text", x = 50, y = 7, 
+             label = "Kicker exogeneity is critical for unbiased causal inference in the GIMR model", 
+             size = 2.8, hjust = 0.5, vjust = 0.5, fontface = "italic", 
+             family = "roboto", color = "#666666")
+  
+  return(field_plot)
+}
+
+# Create the visualization
+modern_exogeneity_field_viz <- create_modern_football_exogeneity_viz()
+
+# Display the plot
+print(modern_exogeneity_field_viz)
+
+# Save the plot with taller dimensions
+# Load necessary libraries
+library(ggplot2)
+library(ggpubr)
+library(extrafont)
+library(showtext)
+
+# Add some modern fonts
+font_add_google("Roboto", "roboto")
+font_add_google("Montserrat", "montserrat")
+showtext_auto()
+
+# Create a modern football field visualization of kicker exogeneity - TALLER VERSION
+create_modern_football_exogeneity_viz <- function() {
+  # Set up the base plot with a football field appearance
+  field_plot <- ggplot() +
+    theme_void() +
+    xlim(0, 100) +
+    ylim(0, 120) +  # Increased height from 100 to 120
+    theme(
+      plot.background = element_rect(fill = "#F5F5F7"),
+      plot.margin = margin(25, 20, 25, 20),  # Increased top and bottom margins
+      text = element_text(family = "montserrat")
+    )
+  
+  # Add a subtle pattern/texture to the background
+  for (i in seq(5, 95, by = 5)) {
+    field_plot <- field_plot + 
+      annotate("segment", x = i, y = 0, xend = i, yend = 120, 
+               color = "#EEEEEE", size = 0.3)
+  }
+  for (i in seq(5, 115, by = 5)) {  # Extended grid lines vertically
+    field_plot <- field_plot + 
+      annotate("segment", x = 0, y = i, xend = 100, yend = i, 
+               color = "#EEEEEE", size = 0.3)
+  }
+  
+  # Add field markings with modern styling
+  field_plot <- field_plot +
+    # Field background with gradient - positioned lower to have more space at top
+    annotate("rect", xmin = 10, xmax = 90, ymin = 20, ymax = 85, 
+             fill = "#4AA02C", color = NA, alpha = 0.7) +
+    
+    # Yard lines - repositioned
+    annotate("segment", x = 10, y = 20, xend = 10, yend = 85, color = "white", size = 1) +
+    annotate("segment", x = 90, y = 20, xend = 90, yend = 85, color = "white", size = 1) +
+    annotate("segment", x = 20, y = 20, xend = 20, yend = 85, color = "white", size = 0.5) +
+    annotate("segment", x = 30, y = 20, xend = 30, yend = 85, color = "white", size = 0.5) +
+    annotate("segment", x = 40, y = 20, xend = 40, yend = 85, color = "white", size = 0.5) +
+    annotate("segment", x = 50, y = 20, xend = 50, yend = 85, color = "white", size = 1) +
+    annotate("segment", x = 60, y = 20, xend = 60, yend = 85, color = "white", size = 0.5) +
+    annotate("segment", x = 70, y = 20, xend = 70, yend = 85, color = "white", size = 0.5) +
+    annotate("segment", x = 80, y = 20, xend = 80, yend = 85, color = "white", size = 0.5) +
+    
+    # End zones with gradient - repositioned
+    annotate("rect", xmin = 0, xmax = 10, ymin = 20, ymax = 85, 
+             fill = "#D62728", alpha = 0.8) +
+    annotate("rect", xmin = 90, xmax = 100, ymin = 20, ymax = 85, 
+             fill = "#1F77B4", alpha = 0.8) +
+    
+    # Modern field labels - repositioned
+    annotate("text", x = 5, y = 52.5, label = "END ZONE", color = "white", 
+             size = 3.2, angle = 90, fontface = "bold", family = "montserrat") +
+    annotate("text", x = 15, y = 15, label = "OWN 10", color = "#444444", 
+             size = 2.8, family = "roboto") +
+    annotate("text", x = 25, y = 15, label = "OWN 25", color = "#444444", 
+             size = 2.8, family = "roboto") +
+    annotate("text", x = 50, y = 15, label = "MIDFIELD", color = "#444444", 
+             size = 3.2, fontface = "bold", family = "montserrat") +
+    annotate("text", x = 75, y = 15, label = "OPP 25", color = "#444444", 
+             size = 2.8, family = "roboto") +
+    annotate("text", x = 85, y = 15, label = "OPP 10", color = "#444444", 
+             size = 2.8, family = "roboto") +
+    annotate("text", x = 95, y = 52.5, label = "END ZONE", color = "white", 
+             size = 3.2, angle = 90, fontface = "bold", family = "montserrat")
+  
+  # Add title with modern styling - moved higher
+  field_plot <- field_plot +
+    annotate("text", x = 50, y = 115, 
+             label = "Kicker Exogeneity by Field Position and Down", 
+             size = 5.2, hjust = 0.5, vjust = 0.5, fontface = "bold", 
+             family = "montserrat", color = "#333333")
+  
+  # Add field position zones with gradient transparency - repositioned
+  field_plot <- field_plot +
+    # Too far zone (own territory)
+    annotate("rect", xmin = 10, xmax = 35, ymin = 20, ymax = 85, 
+             fill = "#60BD68", alpha = 0.2, color = NA) +
+    # Middle field zone
+    annotate("rect", xmin = 35, xmax = 65, ymin = 20, ymax = 85, 
+             fill = "#FAA43A", alpha = 0.2, color = NA) +
+    # Too close zone (opponent territory/red zone)
+    annotate("rect", xmin = 65, xmax = 90, ymin = 20, ymax = 85, 
+             fill = "#60BD68", alpha = 0.2, color = NA)
+  
+  # Add modern zone labels with rounded corners - repositioned
+  field_plot <- field_plot +
+    # Too far zone label
+    annotate("rect", xmin = 10, xmax = 35, ymin = 86, ymax = 92, 
+             fill = "#60BD68", alpha = 0.8, color = NA) +
+    annotate("text", x = 22.5, y = 89, label = "TOO FAR FOR FG", 
+             color = "white", fontface = "bold", size = 3.2, family = "montserrat") +
+    
+    # Middle field zone label
+    annotate("rect", xmin = 35, xmax = 65, ymin = 86, ymax = 92, 
+             fill = "#FAA43A", alpha = 0.8, color = NA) +
+    annotate("text", x = 50, y = 89, label = "POTENTIAL FG RANGE", 
+             color = "white", fontface = "bold", size = 3.2, family = "montserrat") +
+    
+    # Too close zone label
+    annotate("rect", xmin = 65, xmax = 90, ymin = 86, ymax = 92, 
+             fill = "#60BD68", alpha = 0.8, color = NA) +
+    annotate("text", x = 77.5, y = 89, label = "TD PRIORITY ZONE", 
+             color = "white", fontface = "bold", size = 3.2, family = "montserrat")
+  
+  # Add 3rd Down section with modern styling - repositioned with more space
+  field_plot <- field_plot +
+    # Background with shadow effect
+    annotate("rect", xmin = 15.8, xmax = 85.2, ymin = 39.8, ymax = 59.2, 
+             fill = "#00000022", color = NA) +
+    annotate("rect", xmin = 15, xmax = 85, ymin = 40, ymax = 59, 
+             fill = "white", color = NA, alpha = 0.95) +
+    
+    # Title - with more space
+    annotate("text", x = 50, y = 55, label = "3RD DOWN", 
+             color = "#5DA5DA", fontface = "bold", size = 4.2, family = "montserrat") +
+    
+    # Zone descriptions - with more space
+    annotate("text", x = 25, y = 50, label = "EXOGENOUS", 
+             color = "#60BD68", fontface = "bold", size = 3.6, family = "montserrat") +
+    annotate("text", x = 25, y = 45, label = "Kicker not relevant", 
+             color = "#444444", size = 2.8, family = "roboto") +
+    
+    annotate("text", x = 50, y = 50, label = "NOT EXOGENOUS", 
+             color = "#F15854", fontface = "bold", size = 3.6, family = "montserrat") +
+    annotate("text", x = 50, y = 45, label = "Affects future 4th down decision", 
+             color = "#444444", size = 2.8, family = "roboto") +
+    
+    annotate("text", x = 75, y = 50, label = "EXOGENOUS", 
+             color = "#60BD68", fontface = "bold", size = 3.6, family = "montserrat") +
+    annotate("text", x = 75, y = 45, label = "Kicker not relevant", 
+             color = "#444444", size = 2.8, family = "roboto")
+  
+  # Add 4th Down section with modern styling - repositioned with more space
+  field_plot <- field_plot +
+    # Background with shadow effect
+    annotate("rect", xmin = 15.8, xmax = 85.2, ymin = 23.8, ymax = 37.2, 
+             fill = "#00000022", color = NA) +
+    annotate("rect", xmin = 15, xmax = 85, ymin = 24, ymax = 37, 
+             fill = "white", color = NA, alpha = 0.95) +
+    
+    # Title - with more space
+    annotate("text", x = 50, y = 34, label = "4TH DOWN", 
+             color = "#F15854", fontface = "bold", size = 4.2, family = "montserrat") +
+    
+    # Consistent description across all zones - with more space
+    annotate("text", x = 50, y = 29, 
+             label = "KICKER ALWAYS EXOGENOUS IN 'GO FOR IT' SITUATIONS", 
+             color = "#60BD68", fontface = "bold", size = 3.2, family = "montserrat") +
+    annotate("text", x = 50, y = 26, 
+             label = "No future decisions after 4th down", 
+             color = "#444444", size = 2.8, family = "roboto")
+  
+  # Add explanation text with modern styling - split into two separate boxes with increased height
+  field_plot <- field_plot +
+    # 3rd down explanation box - taller and wider
+    annotate("rect", xmin = 12.8, xmax = 49.8, ymin = 93.8, ymax = 108.2, 
+             fill = "#00000022", color = NA) +
+    annotate("rect", xmin = 12, xmax = 49.5, ymin = 94, ymax = 108, 
+             fill = "#F8F8F8", color = NA, alpha = 0.9) +
+    
+    # 3rd down explanation text - more spaced out
+    annotate("text", x = 30.75, y = 106, 
+             label = "3RD DOWN:", 
+             size = 3.2, hjust = 0.5, vjust = 0.5, fontface = "bold", family = "montserrat", color = "#5DA5DA") +
+    annotate("text", x = 30.75, y = 102, 
+             label = "Kicker quality only matters", 
+             size = 3.0, hjust = 0.5, vjust = 0.5, family = "roboto", color = "#333333") +
+    annotate("text", x = 30.75, y = 99, 
+             label = "in middle field where it affects", 
+             size = 3.0, hjust = 0.5, vjust = 0.5, family = "roboto", color = "#333333") +
+    annotate("text", x = 30.75, y = 96, 
+             label = "future 4th down decisions", 
+             size = 3.0, hjust = 0.5, vjust = 0.5, family = "roboto", color = "#333333") +
+    
+    # 4th down explanation box - taller and wider
+    annotate("rect", xmin = 50.2, xmax = 88.2, ymin = 93.8, ymax = 108.2, 
+             fill = "#00000022", color = NA) +
+    annotate("rect", xmin = 50.5, xmax = 88, ymin = 94, ymax = 108, 
+             fill = "#F8F8F8", color = NA, alpha = 0.9) +
+    
+    # 4th down explanation text - more spaced out
+    annotate("text", x = 69.25, y = 106, 
+             label = "4TH DOWN:", 
+             size = 3.2, hjust = 0.5, vjust = 0.5, fontface = "bold", family = "montserrat", color = "#F15854") +
+    annotate("text", x = 69.25, y = 102, 
+             label = "Kicker is always exogenous", 
+             size = 3.0, hjust = 0.5, vjust = 0.5, family = "roboto", color = "#333333") +
+    annotate("text", x = 69.25, y = 99, 
+             label = "in 'go for it' situations because", 
+             size = 3.0, hjust = 0.5, vjust = 0.5, family = "roboto", color = "#333333") +
+    annotate("text", x = 69.25, y = 96, 
+             label = "no future downs remain", 
+             size = 3.0, hjust = 0.5, vjust = 0.5, family = "roboto", color = "#333333")
+  
+  # Add footer with more subtle styling - repositioned
+  field_plot <- field_plot +
+    annotate("text", x = 50, y = 7, 
+             label = "Kicker exogeneity is critical for unbiased causal inference in the GIMR model", 
+             size = 2.8, hjust = 0.5, vjust = 0.5, fontface = "italic", 
+             family = "roboto", color = "#666666")
+  
+  return(field_plot)
+}
+
+# Create the visualization
+modern_exogeneity_field_viz <- create_modern_football_exogeneity_viz()
+
+# Display the plot
+print(modern_exogeneity_field_viz)
+
+```
+

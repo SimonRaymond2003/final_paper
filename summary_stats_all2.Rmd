@@ -1,0 +1,223 @@
+---
+title: "Consolidated Football Metrics Comparison"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: true
+date: "2025-03-31"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+library(data.table)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+# Options for better output
+options(knitr.kable.NA = '')
+```
+
+```{r load_data}
+# Load datasets
+off_grades_outcome <- fread("unstandardized_processed_predict_ccafd_off_grades.csv.csv.gz")
+off_grades_select <- fread("unstandardized_processed_predict_ccfd_off_grades.csv.csv.gz")
+
+# Get column counts
+outcome_cols <- ncol(off_grades_outcome)
+select_cols <- ncol(off_grades_select)
+```
+
+```{r consolidated_table, results='asis'}
+# Function to create a single consolidated table with manual display names
+create_consolidated_table <- function(outcome_data, select_data) {
+  # Create variable lists with desired metrics
+  variables_to_check <- c(
+    "conversion",
+    "attempt",
+    "ydstogo",
+    "vegas_wp",
+    "spread_line",
+    "total_line",
+    "temp",
+    "wind",
+    "def_stop_rate_run",
+    "def_stop_rate_pass",
+    "offense_player_1_passing_depth_short_grades_pass_12w",
+    "offense_player_1_passing_depth_medium_grades_pass_12w",
+    "offense_player_1_passing_depth_deep_grades_pass_12w",
+    "starter_offense_player_1_passing_depth_short_grades_pass_12w",
+    "starter_offense_player_1_passing_depth_medium_grades_pass_12w",
+    "starter_offense_player_1_passing_depth_deep_grades_pass_12w"
+  )
+  
+  # SEPARATE manual mapping for display names
+  manual_display_names <- c(
+    "Conversion",
+    "Attempt",
+    "Yards to Go",
+    "Vegas Win Prob",
+    "Spread Line",
+    "Total Line",
+    "Temperature",
+    "Wind",
+    "Def Stop Rate (Run)",
+    "Def Stop Rate (Pass)",
+    "QB Short Pass",
+    "QB Medium Pass",
+    "QB Deep Pass",
+    "Starter QB Short",
+    "Starter QB Medium",
+    "Starter QB Deep"
+  )
+  
+  # Create the consolidated dataframe with row.names=NULL to avoid row numbers
+  consolidated <- data.frame(
+    DisplayName = character(),
+    Available_In = character(),
+    
+    # Outcome stats
+    Outcome_Mean = numeric(),
+    Outcome_Median = numeric(),
+    Outcome_SD = numeric(),
+    Outcome_Min = numeric(),
+    Outcome_Max = numeric(),
+    Outcome_Zero_Count = numeric(),
+    Outcome_Zero_Pct = numeric(),
+    
+    # Select stats
+    Select_Mean = numeric(),
+    Select_Median = numeric(),
+    Select_SD = numeric(),
+    Select_Min = numeric(),
+    Select_Max = numeric(),
+    Select_Zero_Count = numeric(),
+    Select_Zero_Pct = numeric(),
+    
+    stringsAsFactors = FALSE,
+    row.names = NULL  # This ensures no row names in the dataframe
+  )
+  
+  # Process each variable
+  for(i in 1:length(variables_to_check)) {
+    var_name <- variables_to_check[i]
+    display_name <- manual_display_names[i]
+    
+    in_outcome <- var_name %in% colnames(outcome_data)
+    in_select <- var_name %in% colnames(select_data)
+    
+    # Determine availability
+    if(in_outcome && in_select) {
+      available_in <- "Both"
+    } else if(in_outcome) {
+      available_in <- "Outcome Only"
+    } else if(in_select) {
+      available_in <- "Select Only"
+    } else {
+      next  # Skip if not in either dataset
+    }
+    
+    # Initialize row with NAs
+    row <- data.frame(
+      DisplayName = display_name,  # Use the manually assigned display name
+      Available_In = available_in,
+      Outcome_Mean = NA,
+      Outcome_Median = NA,
+      Outcome_SD = NA,
+      Outcome_Min = NA,
+      Outcome_Max = NA,
+      Outcome_Zero_Count = NA,
+      Outcome_Zero_Pct = NA,
+      Select_Mean = NA,
+      Select_Median = NA,
+      Select_SD = NA,
+      Select_Min = NA,
+      Select_Max = NA,
+      Select_Zero_Count = NA,
+      Select_Zero_Pct = NA,
+      stringsAsFactors = FALSE,
+      row.names = NULL  # Ensure no row names for each row
+    )
+    
+    # Fill in outcome stats if available
+    if(in_outcome) {
+      var_data <- outcome_data[[var_name]]
+      if(is.numeric(var_data)) {
+        zero_count <- sum(var_data == 0, na.rm = TRUE)
+        zero_pct <- zero_count / sum(!is.na(var_data)) * 100
+        
+        row$Outcome_Mean <- mean(var_data, na.rm = TRUE)
+        row$Outcome_Median <- median(var_data, na.rm = TRUE)
+        row$Outcome_SD <- sd(var_data, na.rm = TRUE)
+        row$Outcome_Min <- min(var_data, na.rm = TRUE)
+        row$Outcome_Max <- max(var_data, na.rm = TRUE)
+        row$Outcome_Zero_Count <- zero_count
+        row$Outcome_Zero_Pct <- zero_pct
+      }
+    }
+    
+    # Fill in select stats if available
+    if(in_select) {
+      var_data <- select_data[[var_name]]
+      if(is.numeric(var_data)) {
+        zero_count <- sum(var_data == 0, na.rm = TRUE)
+        zero_pct <- zero_count / sum(!is.na(var_data)) * 100
+        
+        row$Select_Mean <- mean(var_data, na.rm = TRUE)
+        row$Select_Median <- median(var_data, na.rm = TRUE)
+        row$Select_SD <- sd(var_data, na.rm = TRUE)
+        row$Select_Min <- min(var_data, na.rm = TRUE)
+        row$Select_Max <- max(var_data, na.rm = TRUE)
+        row$Select_Zero_Count <- zero_count
+        row$Select_Zero_Pct <- zero_pct
+      }
+    }
+    
+    # Add row to consolidated dataframe
+    consolidated <- rbind(consolidated, row)
+  }
+  
+  # Format the table caption without observation counts
+  caption <- "Consolidated Football Metrics - Outcome vs. Select"
+  
+  # Remove row names from the dataframe before passing to kable
+  rownames(consolidated) <- NULL
+  
+  # Create the consolidated table with minimal styling
+  table <- kable(consolidated,
+       caption = caption,
+       format = "latex",
+       booktabs = TRUE,
+       digits = 2,
+       col.names = c("Variable", "Available In", 
+                     "Mean", "Median", "SD", "Min", "Max", "Zero Count", "Zero %",
+                     "Mean", "Median", "SD", "Min", "Max", "Zero Count", "Zero %"),
+       align = c('l', 'c', rep('c', 14))) %>%
+    kable_styling(latex_options = c("striped", "hold_position", "scale_down"), 
+                 font_size = 8) %>%
+    add_header_above(c(" " = 2, "Outcome Data" = 7, "Select Data" = 7))
+  
+  # Add a footer note with observation counts and column counts
+  outcome_count <- nrow(outcome_data)
+  select_count <- nrow(select_data)
+  outcome_cols <- ncol(outcome_data)
+  select_cols <- ncol(select_data)
+  
+  # Create a footnote with observation counts and column counts
+  table <- table %>%
+    footnote(
+      general = paste0(
+        "Outcome dataset: ", outcome_count, " observations, ", outcome_cols, " columns | ",
+        "Select dataset: ", select_count, " observations, ", select_cols, " columns"
+      ),
+      general_title = "Dataset information: ",
+      footnote_as_chunk = TRUE,
+      threeparttable = TRUE
+    )
+  
+  return(table)
+}
+
+# Generate the consolidated table
+create_consolidated_table(off_grades_outcome, off_grades_select)
+```

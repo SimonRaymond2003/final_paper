@@ -1,0 +1,125 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Consolidated Football Metrics Comparison},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Consolidated Football Metrics Comparison}
+\author{}
+\date{\vspace{-2.5em}2025-03-31}
+
+\begin{document}
+\maketitle
+
+\begin{table}[!h]
+\centering
+\caption{\label{tab:consolidated_table}Consolidated Football Metrics - Outcome vs. Select
+Outcome: 4019 observations | Select: 25608 observations}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\fontsize{8}{10}\selectfont
+\begin{tabular}[t]{lccccccccccccccc}
+\toprule
+\multicolumn{2}{c}{ } & \multicolumn{7}{c}{Outcome Data} & \multicolumn{7}{c}{Select Data} \\
+\cmidrule(l{3pt}r{3pt}){3-9} \cmidrule(l{3pt}r{3pt}){10-16}
+Variable & Available In & Mean & Median & SD & Min & Max & Zero Count & Zero \% & Mean & Median & SD & Min & Max & Zero Count & Zero \%\\
+\midrule
+\cellcolor{gray!10}{Conversion} & \cellcolor{gray!10}{Outcome Only} & \cellcolor{gray!10}{0.52} & \cellcolor{gray!10}{1.00} & \cellcolor{gray!10}{0.50} & \cellcolor{gray!10}{0.00} & \cellcolor{gray!10}{1.00} & \cellcolor{gray!10}{1923} & \cellcolor{gray!10}{47.85} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{}\\
+Attempt & Select Only &  &  &  &  &  &  &  & 0.22 & 0.00 & 0.41 & 0.00 & 1.00 & 19970 & 77.98\\
+\cellcolor{gray!10}{Yards to Go} & \cellcolor{gray!10}{Both} & \cellcolor{gray!10}{4.12} & \cellcolor{gray!10}{2.00} & \cellcolor{gray!10}{4.58} & \cellcolor{gray!10}{1.00} & \cellcolor{gray!10}{34.00} & \cellcolor{gray!10}{0} & \cellcolor{gray!10}{0.00} & \cellcolor{gray!10}{7.77} & \cellcolor{gray!10}{7.00} & \cellcolor{gray!10}{5.73} & \cellcolor{gray!10}{1.00} & \cellcolor{gray!10}{46.00} & \cellcolor{gray!10}{0} & \cellcolor{gray!10}{0.00}\\
+Vegas Win Prob & Both & 0.33 & 0.21 & 0.34 & 0.00 & 1.00 & 0 & 0.00 & 0.47 & 0.45 & 0.32 & 0.00 & 1.00 & 0 & 0.00\\
+\cellcolor{gray!10}{Spread Line} & \cellcolor{gray!10}{Both} & \cellcolor{gray!10}{1.98} & \cellcolor{gray!10}{3.00} & \cellcolor{gray!10}{6.35} & \cellcolor{gray!10}{-18.00} & \cellcolor{gray!10}{22.00} & \cellcolor{gray!10}{0} & \cellcolor{gray!10}{0.00} & \cellcolor{gray!10}{1.79} & \cellcolor{gray!10}{2.50} & \cellcolor{gray!10}{6.36} & \cellcolor{gray!10}{-18.00} & \cellcolor{gray!10}{22.00} & \cellcolor{gray!10}{44} & \cellcolor{gray!10}{0.17}\\
+\addlinespace
+Total Line & Both & 45.43 & 45.50 & 4.55 & 30.00 & 63.50 & 0 & 0.00 & 45.01 & 45.00 & 4.56 & 30.00 & 63.50 & 0 & 0.00\\
+\cellcolor{gray!10}{Temperature} & \cellcolor{gray!10}{Both} & \cellcolor{gray!10}{60.84} & \cellcolor{gray!10}{70.00} & \cellcolor{gray!10}{15.35} & \cellcolor{gray!10}{6.00} & \cellcolor{gray!10}{93.00} & \cellcolor{gray!10}{0} & \cellcolor{gray!10}{0.00} & \cellcolor{gray!10}{61.73} & \cellcolor{gray!10}{70.00} & \cellcolor{gray!10}{15.14} & \cellcolor{gray!10}{6.00} & \cellcolor{gray!10}{97.00} & \cellcolor{gray!10}{0} & \cellcolor{gray!10}{0.00}\\
+Wind & Both & 5.34 & 4.00 & 5.93 & 0.00 & 44.00 & 1604 & 39.91 & 5.42 & 4.00 & 5.73 & 0.00 & 44.00 & 9639 & 37.64\\
+\cellcolor{gray!10}{Def Stop Rate (Run)} & \cellcolor{gray!10}{Both} & \cellcolor{gray!10}{0.75} & \cellcolor{gray!10}{0.75} & \cellcolor{gray!10}{0.04} & \cellcolor{gray!10}{0.47} & \cellcolor{gray!10}{1.00} & \cellcolor{gray!10}{0} & \cellcolor{gray!10}{0.00} & \cellcolor{gray!10}{0.75} & \cellcolor{gray!10}{0.75} & \cellcolor{gray!10}{0.05} & \cellcolor{gray!10}{0.47} & \cellcolor{gray!10}{1.00} & \cellcolor{gray!10}{0} & \cellcolor{gray!10}{0.00}\\
+Def Stop Rate (Pass) & Both & 0.67 & 0.67 & 0.04 & 0.39 & 0.86 & 0 & 0.00 & 0.67 & 0.67 & 0.04 & 0.37 & 0.91 & 0 & 0.00\\
+\addlinespace
+\cellcolor{gray!10}{QB Short Pass} & \cellcolor{gray!10}{Outcome Only} & \cellcolor{gray!10}{62.06} & \cellcolor{gray!10}{64.84} & \cellcolor{gray!10}{13.90} & \cellcolor{gray!10}{0.00} & \cellcolor{gray!10}{90.20} & \cellcolor{gray!10}{164} & \cellcolor{gray!10}{4.08} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{}\\
+QB Medium Pass & Outcome Only & 63.36 & 66.97 & 17.08 & 0.00 & 99.10 & 209 & 5.20 &  &  &  &  &  &  & \\
+\cellcolor{gray!10}{QB Deep Pass} & \cellcolor{gray!10}{Outcome Only} & \cellcolor{gray!10}{64.38} & \cellcolor{gray!10}{68.19} & \cellcolor{gray!10}{18.05} & \cellcolor{gray!10}{0.00} & \cellcolor{gray!10}{96.40} & \cellcolor{gray!10}{220} & \cellcolor{gray!10}{5.47} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{} & \cellcolor{gray!10}{}\\
+Starter QB Short & Both & 63.95 & 65.13 & 9.26 & 0.00 & 86.40 & 58 & 1.44 & 63.89 & 65.12 & 9.38 & 0.00 & 86.40 & 387 & 1.51\\
+\cellcolor{gray!10}{Starter QB Medium} & \cellcolor{gray!10}{Both} & \cellcolor{gray!10}{66.35} & \cellcolor{gray!10}{67.70} & \cellcolor{gray!10}{11.16} & \cellcolor{gray!10}{0.00} & \cellcolor{gray!10}{94.50} & \cellcolor{gray!10}{57} & \cellcolor{gray!10}{1.42} & \cellcolor{gray!10}{66.36} & \cellcolor{gray!10}{67.89} & \cellcolor{gray!10}{11.41} & \cellcolor{gray!10}{0.00} & \cellcolor{gray!10}{94.50} & \cellcolor{gray!10}{395} & \cellcolor{gray!10}{1.54}\\
+\addlinespace
+Starter QB Deep & Both & 67.47 & 68.76 & 11.93 & 0.00 & 96.00 & 60 & 1.49 & 67.35 & 68.84 & 12.14 & 0.00 & 99.00 & 424 & 1.66\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\end{document}
