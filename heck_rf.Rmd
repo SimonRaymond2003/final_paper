@@ -165,11 +165,10 @@ run_heckman <- function(select_data, outcome_data, n_validation = n_validation) 
   y <- as.factor(rf_data$attempt)  # Convert response to factor
   rf_data[, attempt := NULL]  # Remove response from predictors
   
-  # Train Random Forest model with 400 trees
+  # Train Random Forest model
   rf_model <- randomForest(x = rf_data, 
                           y = y,
-                          ntree = 400,
-                          importance = TRUE)
+                          ntree = 2000)
   
   # Get probability predictions (z) for ALL data
   z <- predict(rf_model, rf_data, type = "prob")[,2]  # Get probabilities for class 1
@@ -180,7 +179,9 @@ run_heckman <- function(select_data, outcome_data, n_validation = n_validation) 
   # Calculate GIMR (lambda) - Generalized inverse mills ratio
   #GIMR <- dnorm(z) / (1 - z)
   #GIMR <- dnorm(z, mean = mean(z), sd = sd(z)) / (1 - z)
-  GIMR <- z/(1-z)
+  #GIMR <- z/(1-z)
+  # make gimr random noise between -1 and 1
+  GIMR <- runif(nrow(rf_data), -1, 1)
 # Add GIMR to the data
 select_data[, GIMR := GIMR]
 
@@ -392,147 +393,86 @@ for (i in 1:length(datasets)) {
 ```
 
 ```{r create_matrices}
-# # Create matrices for t-values and marginal effects
-# # Function to calculate average marginal effects for probit models
-# probit_avg_mfx <- function(model) {
-#   coefs <- coef(model)
-#   X <- model.matrix(model)
-#   
-#   # Calculate density at each observation
-#   density <- dnorm(X %*% coefs)
-#   
-#   # Average marginal effect for each coefficient
-#   mfx <- colMeans(density * X)
-#   
-#   return(mfx)
-# }
-# 
-# # Function to calculate average marginal effects for logit models
-# logit_avg_mfx <- function(model) {
-#   coefs <- coef(model)
-#   X <- model.matrix(model)
-#   
-#   # Calculate the linear predictor
-#   z <- X %*% coefs
-#   
-#   # Calculate logistic density at each observation
-#   # For logit, density = exp(z)/(1+exp(z))^2
-#   density <- exp(z) / (1 + exp(z))^2
-#   
-#   # Average marginal effect for each coefficient
-#   mfx <- colMeans(density * X)
-#   
-#   return(mfx)
-# }
-
-# Function to extract robust standard errors
-get_robust_se <- function(model) {
-  if (inherits(model, "lm") || inherits(model, "glm")) {
-    # For both OLS and GLM models (probit/logit)
+# More cautious function with separate conditions for each model type
+get_model_results <- function(model) {
+  # For OLS models
+  if (inherits(model, "lm") && !inherits(model, "glm")) {
+    coefs <- coef(model)
     robust_se <- sqrt(diag(vcovHC(model, type = "HC1")))
-    return(robust_se)
-  } else if (inherits(model, "mfx")) {
-    # If it's an mfx object, get the standard errors directly
-    return(model$mfxse)
-  } else {
-    stop("Unknown model type")
-  }
-}
-
-# Function to extract t-values using marginal effects (ME) divided by standard errors (SE)
-get_tvalues <- function(model) {
-  # Get marginal effects
-  mfx <- get_marginal_effects(model)
-  
-  # Get standard errors
-  se <- get_robust_se(model)
-  
-  # Ensure both vectors have the same names and are aligned
-  common_names <- intersect(names(mfx), names(se))
-  
-  # Initialize t-values vector with NAs
-  tvals <- rep(NA, length(common_names))
-  names(tvals) <- common_names
-  
-  # Calculate t-values one by one to avoid recycling
-  for (var in common_names) {
-    tvals[var] <- mfx[var] / se[var]
+    tvals <- coefs / robust_se
+    pvals <- 2 * pt(abs(tvals), df = model$df.residual, lower.tail = FALSE)
+    
+    return(list(
+      ME = coefs,
+      SE = robust_se,
+      tval = tvals,
+      pval = pvals
+    ))
   }
   
-  # Add debugging for the GIMR variable (if it exists)
-  if ("GIMR" %in% common_names) {
-    cat("\nDebugging for GIMR in", class(model)[1], "model:\n")
-    cat("Marginal Effect:", mfx["GIMR"], "\n")
-    cat("Standard Error:", se["GIMR"], "\n")
-    cat("Calculated t-value (ME/SE):", tvals["GIMR"], "\n")
+  # For Probit models
+  if (inherits(model, "glm") && model$family$link == "probit") {
+    mfx_result <- tryCatch({
+      # Calculate marginal effects using probitmfx
+      probitmfx(formula = formula(model), data = model.frame(model), robust = TRUE)
+    }, error = function(e) {
+      cat("Error calculating probit marginal effects:", e$message, "\n")
+      return(NULL)
+    })
     
-    # Manual check to verify calculation
-    cat("Manual check t-value:", mfx["GIMR"] / se["GIMR"], "\n")
-    
-    # If it's a linear model, also show the old approach for comparison
-    if (inherits(model, "lm")) {
-      coefs <- coef(model)
-      old_se <- sqrt(diag(vcovHC(model, type = "HC1")))
-      old_tvals <- coefs["GIMR"] / old_se["GIMR"]
-      cat("Old approach - Coefficient:", coefs["GIMR"], "\n")
-      cat("Old approach - Robust SE:", old_se["GIMR"], "\n")
-      cat("Old approach - t-value (Coef/SE):", old_tvals, "\n\n")
+    if (!is.null(mfx_result)) {
+      # Extract the marginal effects matrix
+      mfx_mat <- mfx_result$mfxest
+      
+      # Debug logging to verify we have the correct data structure
+      cat("Column names in probit mfx_mat:", colnames(mfx_mat), "\n")
+      #print out the GIMR calue ones in cat if present 
+      if ("GIMR" %in% rownames(mfx_mat)) {
+        cat("GIMR value in probit mfx_mat:", mfx_mat["GIMR", "dF/dx"], "\n")
+      }
+      
+      return(list(
+        ME = mfx_mat[, "dF/dx"],
+        SE = mfx_mat[, "Std. Err."],
+        tval = mfx_mat[, "z"],
+        pval = mfx_mat[, "P>|z|"]
+      ))
     } else {
-      cat("\n")
+      return(NULL)
     }
   }
   
-  return(tvals)
-}
-
-# Function to extract marginal effects using mfx package
-get_marginal_effects <- function(model) {
-  if (inherits(model, "lm")) {
-    # For OLS models, coefficients are marginal effects
-    return(coef(model))
-  } else if (inherits(model, "glm") && model$family$link == "probit") {
-    # For probit models, use the mfx package to calculate marginal effects
+  # For Logit models
+  if (inherits(model, "glm") && model$family$link == "logit") {
     mfx_result <- tryCatch({
-      # Run probit.mfx with robust standard errors
-      probit_mfx <- probit.mfx(formula = formula(model), data = model.frame(model), robust = TRUE)
-      
-      # Return just the marginal effects (not the standard errors)
-      return(probit_mfx$mfxest)
+      # Calculate marginal effects using logitmfx
+      logitmfx(formula = formula(model), data = model.frame(model), robust = TRUE)
     }, error = function(e) {
-      # If there's an error, fall back to the original method
-      warning("mfx package failed, falling back to manual calculation: ", e$message)
-      #return(probit_avg_mfx(model))
+      cat("Error calculating logit marginal effects:", e$message, "\n")
+      return(NULL)
     })
-    return(mfx_result)
-  } else if (inherits(model, "glm") && model$family$link == "logit") {
-    # For logit models, use the mfx package to calculate marginal effects
-    mfx_result <- tryCatch({
-      # Run logit.mfx with robust standard errors
-      logit_mfx <- logit.mfx(formula = formula(model), data = model.frame(model), robust = TRUE)
+    
+    if (!is.null(mfx_result)) {
+      # Extract the marginal effects matrix
+      mfx_mat <- mfx_result$mfxest
       
-      # Return just the marginal effects (not the standard errors)
-      return(logit_mfx$mfxest)
-    }, error = function(e) {
-      # If there's an error, fall back to the original method
-      warning("mfx package failed, falling back to manual calculation: ", e$message)
-      #return(logit_avg_mfx(model))
-    })
-    return(mfx_result)
-  } else {
-    stop("Unknown model type")
+      # Debug logging to verify we have the correct data structure
+      cat("Column names in logit mfx_mat:", colnames(mfx_mat), "\n")
+      
+      return(list(
+        ME = mfx_mat[, "dF/dx"],
+        SE = mfx_mat[, "Std. Err."],
+        tval = mfx_mat[, "z"],
+        pval = mfx_mat[, "P>|z|"]
+      ))
+    } else {
+      return(NULL)
+    }
   }
-}
-
-# Add validation function to verify t-values
-validate_t_values <- function(mfx, se, tvals, var_name = "GIMR") {
-  if (var_name %in% names(mfx) && var_name %in% names(se)) {
-    cat("\nValidating t-value for", var_name, ":\n")
-    cat("Marginal effect:", mfx[var_name], "\n")
-    cat("Standard error:", se[var_name], "\n")
-    cat("Computed t-value:", tvals[var_name], "\n")
-    cat("Manual check (mfx/se):", mfx[var_name]/se[var_name], "\n")
-    cat("Match?", abs(tvals[var_name] - mfx[var_name]/se[var_name]) < 0.0001, "\n\n")
-  }
+  
+  # If we get here, the model type wasn't recognized
+  cat("Warning: Unrecognized model type for", deparse(substitute(model)), "\n")
+  return(NULL)
 }
 
 # Create lists to store all matrices
@@ -545,15 +485,26 @@ for (dataset_name in names(all_outcome_models)) {
   cat("\nProcessing", dataset_name, "matrix\n")
   models <- all_outcome_models[[dataset_name]]
   
-  # Collect all variable names from all models for this dataset
-  all_vars <- unique(c(
-    names(coef(models$ols_starter_model)),
-    names(coef(models$probit_starter_model)),
-    names(coef(models$ols_model_player)),
-    names(coef(models$probit_model_player)),
-    names(coef(models$ols_attempts_model)),
-    names(coef(models$probit_attempts_model))
-  ))
+  # Get results for each model using get_model_results without passing the data
+  starter_ols_results <- get_model_results(models$ols_starter_model)
+  starter_probit_results <- get_model_results(models$probit_starter_model)
+  starter_logit_results <- get_model_results(models$logit_starter_model)
+  
+  player_ols_results <- get_model_results(models$ols_model_player)
+  player_probit_results <- get_model_results(models$probit_model_player)
+  player_logit_results <- get_model_results(models$logit_model_player)
+  
+  attempt_ols_results <- get_model_results(models$ols_attempts_model)
+  attempt_probit_results <- get_model_results(models$probit_attempts_model)
+  attempt_logit_results <- get_model_results(models$logit_attempts_model)
+  
+ 
+  # Collect all variable names from all models
+  all_vars <- unique(unlist(lapply(list(
+    starter_ols_results, starter_probit_results, starter_logit_results,
+    player_ols_results, player_probit_results, player_logit_results,
+    attempt_ols_results, attempt_probit_results, attempt_logit_results
+  ), function(x) if (!is.null(x)) names(x$ME) else NULL)))
   
   starter_position_vars <- grep("^starter_(QB|RB|FB|WR\\d+|TE\\d+|OL\\d+|DL\\d+|LB\\d+|CB\\d+|S\\d+)_", all_vars, value = TRUE)
   
@@ -596,197 +547,112 @@ for (dataset_name in names(all_outcome_models)) {
                            "Player OLS", "Player Probit", "Player Logit", 
                            "Attempt OLS", "Attempt Probit", "Attempt Logit")
   
-  # Get t-values, marginal effects, and standard errors for all models
-  tvals_list <- list(
-    starter_ols = tryCatch(get_tvalues(models$ols_starter_model), error = function(e) NULL),
-    starter_probit = tryCatch(get_tvalues(models$probit_starter_model), error = function(e) NULL),
-    starter_logit = tryCatch(get_tvalues(models$logit_starter_model), error = function(e) NULL),
-    player_ols = tryCatch(get_tvalues(models$ols_model_player), error = function(e) NULL),
-    player_probit = tryCatch(get_tvalues(models$probit_model_player), error = function(e) NULL),
-    player_logit = tryCatch(get_tvalues(models$logit_model_player), error = function(e) NULL),
-    attempt_ols = tryCatch(get_tvalues(models$ols_attempts_model), error = function(e) NULL),
-    attempt_probit = tryCatch(get_tvalues(models$probit_attempts_model), error = function(e) NULL),
-    attempt_logit = tryCatch(get_tvalues(models$logit_attempts_model), error = function(e) NULL)
+  # Initialize lists to store results for each model type
+  results_list <- list(
+    starter_ols = starter_ols_results,
+    starter_probit = starter_probit_results, 
+    starter_logit = starter_logit_results,
+    player_ols = player_ols_results,
+    player_probit = player_probit_results,
+    player_logit = player_logit_results,
+    attempt_ols = attempt_ols_results,
+    attempt_probit = attempt_probit_results,
+    attempt_logit = attempt_logit_results
   )
+  ########## ITS BROKEN BY HERE.################
   
-  mfx_list <- list(
-    starter_ols = tryCatch(get_marginal_effects(models$ols_starter_model), error = function(e) NULL),
-    starter_probit = tryCatch(get_marginal_effects(models$probit_starter_model), error = function(e) NULL),
-    starter_logit = tryCatch(get_marginal_effects(models$logit_starter_model), error = function(e) NULL),
-    player_ols = tryCatch(get_marginal_effects(models$ols_model_player), error = function(e) NULL),
-    player_probit = tryCatch(get_marginal_effects(models$probit_model_player), error = function(e) NULL),
-    player_logit = tryCatch(get_marginal_effects(models$logit_model_player), error = function(e) NULL),
-    attempt_ols = tryCatch(get_marginal_effects(models$ols_attempts_model), error = function(e) NULL),
-    attempt_probit = tryCatch(get_marginal_effects(models$probit_attempts_model), error = function(e) NULL),
-    attempt_logit = tryCatch(get_marginal_effects(models$logit_attempts_model), error = function(e) NULL)
-  )
-  
-  se_list <- list(
-    starter_ols = tryCatch(get_robust_se(models$ols_starter_model), error = function(e) NULL),
-    starter_probit = tryCatch(get_robust_se(models$probit_starter_model), error = function(e) NULL),
-    starter_logit = tryCatch(get_robust_se(models$logit_starter_model), error = function(e) NULL),
-    player_ols = tryCatch(get_robust_se(models$ols_model_player), error = function(e) NULL),
-    player_probit = tryCatch(get_robust_se(models$probit_model_player), error = function(e) NULL),
-    player_logit = tryCatch(get_robust_se(models$logit_model_player), error = function(e) NULL),
-    attempt_ols = tryCatch(get_robust_se(models$ols_attempts_model), error = function(e) NULL),
-    attempt_probit = tryCatch(get_robust_se(models$probit_attempts_model), error = function(e) NULL),
-    attempt_logit = tryCatch(get_robust_se(models$logit_attempts_model), error = function(e) NULL)
-  )
-  
-  # Fill matrices with combined variable values
+  # Fill matrices
   for (var in base_vars) {
     # For player models (columns 4-6)
-    if (!is.null(tvals_list$player_ols) && var %in% names(tvals_list$player_ols)) {
-      tval_matrix[var, 4] <- tvals_list$player_ols[var]
+    if (!is.null(results_list$player_ols) && var %in% names(results_list$player_ols$ME)) {
+      tval_matrix[var, 4] <- results_list$player_ols$tval[var]
+      mfx_matrix[var, 4] <- results_list$player_ols$ME[var]
+      se_matrix[var, 4] <- results_list$player_ols$SE[var]
     }
-    if (!is.null(tvals_list$player_probit) && var %in% names(tvals_list$player_probit)) {
-      tval_matrix[var, 5] <- tvals_list$player_probit[var]
+    if (!is.null(results_list$player_probit) && var %in% names(results_list$player_probit$ME)) {
+      tval_matrix[var, 5] <- results_list$player_probit$tval[var]
+      mfx_matrix[var, 5] <- results_list$player_probit$ME[var]
+      se_matrix[var, 5] <- results_list$player_probit$SE[var]
     }
-    if (!is.null(tvals_list$player_logit) && var %in% names(tvals_list$player_logit)) {
-      tval_matrix[var, 6] <- tvals_list$player_logit[var]
-    }
-    if (!is.null(mfx_list$player_ols) && var %in% names(mfx_list$player_ols)) {
-      mfx_matrix[var, 4] <- mfx_list$player_ols[var]
-    }
-    if (!is.null(mfx_list$player_probit) && var %in% names(mfx_list$player_probit)) {
-      mfx_matrix[var, 5] <- mfx_list$player_probit[var]
-    }
-    if (!is.null(mfx_list$player_logit) && var %in% names(mfx_list$player_logit)) {
-      mfx_matrix[var, 6] <- mfx_list$player_logit[var]
-    }
-    if (!is.null(se_list$player_ols) && var %in% names(se_list$player_ols)) {
-      se_matrix[var, 4] <- se_list$player_ols[var]
-    }
-    if (!is.null(se_list$player_probit) && var %in% names(se_list$player_probit)) {
-      se_matrix[var, 5] <- se_list$player_probit[var]
-    }
-    if (!is.null(se_list$player_logit) && var %in% names(se_list$player_logit)) {
-      se_matrix[var, 6] <- se_list$player_logit[var]
+    if (!is.null(results_list$player_logit) && var %in% names(results_list$player_logit$ME)) {
+      tval_matrix[var, 6] <- results_list$player_logit$tval[var]
+      mfx_matrix[var, 6] <- results_list$player_logit$ME[var]
+      se_matrix[var, 6] <- results_list$player_logit$SE[var]
     }
     
-    # For starter models (columns 1-3)
+    # For starter models (columns 1-3) 
     starter_var <- var_mapping[[var]]
     
     # Case 1: It's a position variable with starter_ prefix mapping
     if (!is.null(starter_var)) {
-      if (!is.null(tvals_list$starter_ols) && starter_var %in% names(tvals_list$starter_ols)) {
-        tval_matrix[var, 1] <- tvals_list$starter_ols[starter_var]
+      if (!is.null(results_list$starter_ols) && starter_var %in% names(results_list$starter_ols$ME)) {
+        tval_matrix[var, 1] <- results_list$starter_ols$tval[starter_var]
+        mfx_matrix[var, 1] <- results_list$starter_ols$ME[starter_var]
+        se_matrix[var, 1] <- results_list$starter_ols$SE[starter_var]
       }
-      if (!is.null(tvals_list$starter_probit) && starter_var %in% names(tvals_list$starter_probit)) {
-        tval_matrix[var, 2] <- tvals_list$starter_probit[starter_var]
+      if (!is.null(results_list$starter_probit) && starter_var %in% names(results_list$starter_probit$ME)) {
+        tval_matrix[var, 2] <- results_list$starter_probit$tval[starter_var]
+        mfx_matrix[var, 2] <- results_list$starter_probit$ME[starter_var]
+        se_matrix[var, 2] <- results_list$starter_probit$SE[starter_var]
       }
-      if (!is.null(tvals_list$starter_logit) && starter_var %in% names(tvals_list$starter_logit)) {
-        tval_matrix[var, 3] <- tvals_list$starter_logit[starter_var]
+      if (!is.null(results_list$starter_logit) && starter_var %in% names(results_list$starter_logit$ME)) {
+        tval_matrix[var, 3] <- results_list$starter_logit$tval[starter_var]
+        mfx_matrix[var, 3] <- results_list$starter_logit$ME[starter_var]
+        se_matrix[var, 3] <- results_list$starter_logit$SE[starter_var]
       }
-      if (!is.null(mfx_list$starter_ols) && starter_var %in% names(mfx_list$starter_ols)) {
-        mfx_matrix[var, 1] <- mfx_list$starter_ols[starter_var]
-      }
-      if (!is.null(mfx_list$starter_probit) && starter_var %in% names(mfx_list$starter_probit)) {
-        mfx_matrix[var, 2] <- mfx_list$starter_probit[starter_var]
-      }
-      if (!is.null(mfx_list$starter_logit) && starter_var %in% names(mfx_list$starter_logit)) {
-        mfx_matrix[var, 3] <- mfx_list$starter_logit[starter_var]
-      }
-      if (!is.null(se_list$starter_ols) && starter_var %in% names(se_list$starter_ols)) {
-        se_matrix[var, 1] <- se_list$starter_ols[starter_var]
-      }
-      if (!is.null(se_list$starter_probit) && starter_var %in% names(se_list$starter_probit)) {
-        se_matrix[var, 2] <- se_list$starter_probit[starter_var]
-      }
-      if (!is.null(se_list$starter_logit) && starter_var %in% names(se_list$starter_logit)) {
-        se_matrix[var, 3] <- se_list$starter_logit[starter_var]
-      }
-    } 
+    }
     # Case 2: It's a regular variable (no starter_ prefix needed)
     else {
-      if (!is.null(tvals_list$starter_ols) && var %in% names(tvals_list$starter_ols)) {
-        tval_matrix[var, 1] <- tvals_list$starter_ols[var]
+      if (!is.null(results_list$starter_ols) && var %in% names(results_list$starter_ols$ME)) {
+        tval_matrix[var, 1] <- results_list$starter_ols$tval[var]
+        mfx_matrix[var, 1] <- results_list$starter_ols$ME[var]
+        se_matrix[var, 1] <- results_list$starter_ols$SE[var]
       }
-      if (!is.null(tvals_list$starter_probit) && var %in% names(tvals_list$starter_probit)) {
-        tval_matrix[var, 2] <- tvals_list$starter_probit[var]
+      if (!is.null(results_list$starter_probit) && var %in% names(results_list$starter_probit$ME)) {
+        tval_matrix[var, 2] <- results_list$starter_probit$tval[var]
+        mfx_matrix[var, 2] <- results_list$starter_probit$ME[var]
+        se_matrix[var, 2] <- results_list$starter_probit$SE[var]
       }
-      if (!is.null(tvals_list$starter_logit) && var %in% names(tvals_list$starter_logit)) {
-        tval_matrix[var, 3] <- tvals_list$starter_logit[var]
-      }
-      if (!is.null(mfx_list$starter_ols) && var %in% names(mfx_list$starter_ols)) {
-        mfx_matrix[var, 1] <- mfx_list$starter_ols[var]
-      }
-      if (!is.null(mfx_list$starter_probit) && var %in% names(mfx_list$starter_probit)) {
-        mfx_matrix[var, 2] <- mfx_list$starter_probit[var]
-      }
-      if (!is.null(mfx_list$starter_logit) && var %in% names(mfx_list$starter_logit)) {
-        mfx_matrix[var, 3] <- mfx_list$starter_logit[var]
-      }
-      if (!is.null(se_list$starter_ols) && var %in% names(se_list$starter_ols)) {
-        se_matrix[var, 1] <- se_list$starter_ols[var]
-      }
-      if (!is.null(se_list$starter_probit) && var %in% names(se_list$starter_probit)) {
-        se_matrix[var, 2] <- se_list$starter_probit[var]
-      }
-      if (!is.null(se_list$starter_logit) && var %in% names(se_list$starter_logit)) {
-        se_matrix[var, 3] <- se_list$starter_logit[var]
+      if (!is.null(results_list$starter_logit) && var %in% names(results_list$starter_logit$ME)) {
+        tval_matrix[var, 3] <- results_list$starter_logit$tval[var]
+        mfx_matrix[var, 3] <- results_list$starter_logit$ME[var]
+        se_matrix[var, 3] <- results_list$starter_logit$SE[var]
       }
     }
     
     # For attempt models (columns 7-9)
-    # Attempt variables don't have the same naming convention, 
-    # so we just include them if they happen to match
-    if (!is.null(tvals_list$attempt_ols) && var %in% names(tvals_list$attempt_ols)) {
-      tval_matrix[var, 7] <- tvals_list$attempt_ols[var]
+    if (!is.null(results_list$attempt_ols) && var %in% names(results_list$attempt_ols$ME)) {
+      tval_matrix[var, 7] <- results_list$attempt_ols$tval[var]
+      mfx_matrix[var, 7] <- results_list$attempt_ols$ME[var]
+      se_matrix[var, 7] <- results_list$attempt_ols$SE[var]
     }
-    if (!is.null(tvals_list$attempt_probit) && var %in% names(tvals_list$attempt_probit)) {
-      tval_matrix[var, 8] <- tvals_list$attempt_probit[var]
+    if (!is.null(results_list$attempt_probit) && var %in% names(results_list$attempt_probit$ME)) {
+      tval_matrix[var, 8] <- results_list$attempt_probit$tval[var]
+      mfx_matrix[var, 8] <- results_list$attempt_probit$ME[var]
+      se_matrix[var, 8] <- results_list$attempt_probit$SE[var]
     }
-    if (!is.null(tvals_list$attempt_logit) && var %in% names(tvals_list$attempt_logit)) {
-      tval_matrix[var, 9] <- tvals_list$attempt_logit[var]
-    }
-    if (!is.null(mfx_list$attempt_ols) && var %in% names(mfx_list$attempt_ols)) {
-      mfx_matrix[var, 7] <- mfx_list$attempt_ols[var]
-    }
-    if (!is.null(mfx_list$attempt_probit) && var %in% names(mfx_list$attempt_probit)) {
-      mfx_matrix[var, 8] <- mfx_list$attempt_probit[var]
-    }
-    if (!is.null(mfx_list$attempt_logit) && var %in% names(mfx_list$attempt_logit)) {
-      mfx_matrix[var, 9] <- mfx_list$attempt_logit[var]
-    }
-    if (!is.null(se_list$attempt_ols) && var %in% names(se_list$attempt_ols)) {
-      se_matrix[var, 7] <- se_list$attempt_ols[var]
-    }
-    if (!is.null(se_list$attempt_probit) && var %in% names(se_list$attempt_probit)) {
-      se_matrix[var, 8] <- se_list$attempt_probit[var]
-    }
-    if (!is.null(se_list$attempt_logit) && var %in% names(se_list$attempt_logit)) {
-      se_matrix[var, 9] <- se_list$attempt_logit[var]
+    if (!is.null(results_list$attempt_logit) && var %in% names(results_list$attempt_logit$ME)) {
+      tval_matrix[var, 9] <- results_list$attempt_logit$tval[var]
+      mfx_matrix[var, 9] <- results_list$attempt_logit$ME[var]
+      se_matrix[var, 9] <- results_list$attempt_logit$SE[var]
     }
     
     # Also check for starter_ version in attempt models
     if (!is.null(starter_var)) {
-      if (!is.null(tvals_list$attempt_ols) && starter_var %in% names(tvals_list$attempt_ols)) {
-        tval_matrix[var, 7] <- tvals_list$attempt_ols[starter_var]
+      if (!is.null(results_list$attempt_ols) && starter_var %in% names(results_list$attempt_ols$ME)) {
+        tval_matrix[var, 7] <- results_list$attempt_ols$tval[starter_var]
+        mfx_matrix[var, 7] <- results_list$attempt_ols$ME[starter_var]
+        se_matrix[var, 7] <- results_list$attempt_ols$SE[starter_var]
       }
-      if (!is.null(tvals_list$attempt_probit) && starter_var %in% names(tvals_list$attempt_probit)) {
-        tval_matrix[var, 8] <- tvals_list$attempt_probit[starter_var]
+      if (!is.null(results_list$attempt_probit) && starter_var %in% names(results_list$attempt_probit$ME)) {
+        tval_matrix[var, 8] <- results_list$attempt_probit$tval[starter_var]
+        mfx_matrix[var, 8] <- results_list$attempt_probit$ME[starter_var]
+        se_matrix[var, 8] <- results_list$attempt_probit$SE[starter_var]
       }
-      if (!is.null(tvals_list$attempt_logit) && starter_var %in% names(tvals_list$attempt_logit)) {
-        tval_matrix[var, 9] <- tvals_list$attempt_logit[starter_var]
-      }
-      if (!is.null(mfx_list$attempt_ols) && starter_var %in% names(mfx_list$attempt_ols)) {
-        mfx_matrix[var, 7] <- mfx_list$attempt_ols[starter_var]
-      }
-      if (!is.null(mfx_list$attempt_probit) && starter_var %in% names(mfx_list$attempt_probit)) {
-        mfx_matrix[var, 8] <- mfx_list$attempt_probit[starter_var]
-      }
-      if (!is.null(mfx_list$attempt_logit) && starter_var %in% names(mfx_list$attempt_logit)) {
-        mfx_matrix[var, 9] <- mfx_list$attempt_logit[starter_var]
-      }
-      if (!is.null(se_list$attempt_ols) && starter_var %in% names(se_list$attempt_ols)) {
-        se_matrix[var, 7] <- se_list$attempt_ols[starter_var]
-      }
-      if (!is.null(se_list$attempt_probit) && starter_var %in% names(se_list$attempt_probit)) {
-        se_matrix[var, 8] <- se_list$attempt_probit[starter_var]
-      }
-      if (!is.null(se_list$attempt_logit) && starter_var %in% names(se_list$attempt_logit)) {
-        se_matrix[var, 9] <- se_list$attempt_logit[starter_var]
+      if (!is.null(results_list$attempt_logit) && starter_var %in% names(results_list$attempt_logit$ME)) {
+        tval_matrix[var, 9] <- results_list$attempt_logit$tval[starter_var]
+        mfx_matrix[var, 9] <- results_list$attempt_logit$ME[starter_var]
+        se_matrix[var, 9] <- results_list$attempt_logit$SE[starter_var]
       }
     }
   }

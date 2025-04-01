@@ -16,13 +16,13 @@ png(filename = "function_plot.png", width = 800, height = 600)
 z <- seq(0, 0.99, by = 0.01)
 
 # Calculate the function values
-f_z <- z / (1 - z)
+f_z <- dnorm(z) / (1 - z)
 
 # Create the plot
 plot(z, f_z, type = "l", col = "blue", lwd = 2,
      main = "Plot of f(z) = z/(1-z) for z from 0 to 1",
      xlab = "z", ylab = "f(z)",
-     xlim = c(0, 1), ylim = c(0, 100))
+     xlim = c(0, 1), ylim = c(0, 20))
 
 # Add a grid for better readability
 grid()

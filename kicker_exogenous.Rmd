@@ -90,13 +90,13 @@ names(control_info) <- dataset_names
 # Initialize control info
 for(d in 1:length(ctd1_datasets)) {
   control_info[[d]] <- list(
-    game_situation = FALSE,
-    environmental = FALSE,
-    coach = FALSE,
-    team_stats = FALSE,
-    player_vars = FALSE,
+    game_situation = TRUE,
+    environmental = TRUE,
+    coach = TRUE,
+    team_stats = TRUE,
+    player_vars = TRUE,
     player_presence = TRUE, 
-    team_fe = FALSE,
+    team_fe = TRUE,
     coach_fe = FALSE
   )
 }

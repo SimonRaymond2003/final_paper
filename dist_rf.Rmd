@@ -1,0 +1,540 @@
+---
+title: "Heckman probit, logit and ols"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+date: "2025-03-21"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE)
+# Heckman Selection Model Analysis for All Datasets
+# This script runs Heckman selection models on all processed datasets
+
+library(data.table)
+library(randomForest)
+library(ROCR)
+library(sandwich)
+library(lmtest)
+library(car)
+library(mfx)  # Added for better marginal effects calculation
+
+# Options for better output
+options(max.print=10000)
+
+```
+
+```{r}
+# Column Name Transformer for Football Analytics with individual OL positions
+transform_column_names <- function(df) {
+  # Position mapping with individual OL positions
+  offense_positions <- c(
+    # QB slots (1-3)
+    "1" = "QB", "2" = "QB2", "3" = "QB3",
+    # Backs slots (4-7)
+    "4" = "RB", "5" = "RB2", "6" = "FB", "7" = "FB2",
+    # Wide receivers slots (8-13)
+    "8" = "WR1", "9" = "WR2", "10" = "WR3", "11" = "WR4", "12" = "WR5", "13" = "WR6",
+    # Tight ends slots (14-16)
+    "14" = "TE1", "15" = "TE2", "16" = "TE3",
+    # Offensive line slots (17-24) - now with unique identifiers
+    "17" = "OL1", "18" = "OL2", "19" = "OL3", "20" = "OL4", "21" = "OL5", 
+    "22" = "OL6", "23" = "OL7", "24" = "OL8"
+  )
+  
+  defense_positions <- c(
+    # Defensive line slots (1-8)
+    "1" = "DL1", "2" = "DL2", "3" = "DL3", "4" = "DL4", 
+    "5" = "DL5", "6" = "DL6", "7" = "DL7", "8" = "DL8",
+    # Linebackers slots (9-14)
+    "9" = "LB1", "10" = "LB2", "11" = "LB3", "12" = "LB4", 
+    "13" = "LB5", "14" = "LB6",
+    # Cornerbacks slots (15-19)
+    "15" = "CB1", "16" = "CB2", "17" = "CB3", "18" = "CB4", "19" = "CB5",
+    # Safeties slots (20-23)
+    "20" = "S1", "21" = "S2", "22" = "S3", "23" = "S4"
+  )
+  
+  # Get column names
+  cols <- colnames(df)
+  new_cols <- cols
+  
+  for (i in seq_along(cols)) {
+    col <- cols[i]
+    
+    # Handle offense player patterns
+    if (grepl("offense_player_", col)) {
+      player_num <- gsub(".*offense_player_([0-9\\-]+).*", "\\1", col)
+      
+      # Determine position
+      if (grepl("-", player_num)) {
+        # Handle OL range notation if present (e.g., "17-21")
+        # Extract the range and assign appropriate OL position
+        range_parts <- strsplit(player_num, "-")[[1]]
+        if (length(range_parts) == 2) {
+          start_num <- as.numeric(range_parts[1])
+          if (start_num >= 17 && start_num <= 24) {
+            position <- paste0("OL", start_num - 16)  # Convert slot to OL position number
+          } else {
+            position <- paste0("OFF", player_num)
+          }
+        } else {
+          position <- paste0("OFF", player_num)
+        }
+      } else if (player_num %in% names(offense_positions)) {
+        position <- offense_positions[player_num]
+      } else {
+        position <- paste0("OFF", player_num)
+      }
+      
+      # Replace pattern and remove first two words after
+      if (grepl("^starter_", col)) {
+        parts <- strsplit(gsub("starter_offense_player_[0-9\\-]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste("starter", position, paste(parts, collapse = "_"), sep = "_")
+      } else {
+        parts <- strsplit(gsub("offense_player_[0-9\\-]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste(position, paste(parts, collapse = "_"), sep = "_")
+      }
+    }
+    
+    # Handle defense player patterns (same as before)
+    else if (grepl("defense_player_", col)) {
+      player_num <- gsub(".*defense_player_([0-9]+).*", "\\1", col)
+      
+      # Determine position
+      if (player_num %in% names(defense_positions)) {
+        position <- defense_positions[player_num]
+      } else {
+        position <- paste0("DEF", player_num)
+      }
+      
+      # Replace pattern and remove first two words after
+      if (grepl("^starter_", col)) {
+        parts <- strsplit(gsub("starter_defense_player_[0-9]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste("starter", position, paste(parts, collapse = "_"), sep = "_")
+      } else {
+        parts <- strsplit(gsub("defense_player_[0-9]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste(position, paste(parts, collapse = "_"), sep = "_")
+      }
+    }
+  }
+  
+  # Set the new column names
+  colnames(df) <- new_cols
+  return(df)
+}
+
+run_heckman <- function(select_data, outcome_data, n_validation = n_validation) {
+  
+  # Data preparation
+  select_data[, attempt := as.numeric(as.character(attempt))]
+  
+  # Remove unwanted columns
+  select_data[, c("attendance_raw", "attendance_pct") := NULL]
+  # Remove specific columns if they exist
+  if ("yardline_31_40" %in% names(select_data)) select_data[, yardline_31_40 := NULL]
+  if ("Giff_Smith" %in% names(select_data)) select_data[, Giff_Smith := NULL]
+  
+  # Make a copy of select_data for RandomForest to preserve original for attempt models
+  rf_data <- copy(select_data)
+  
+  # Remove coach columns for RandomForest
+  coach_cols <- names(rf_data)[grep("^[A-Z][a-z]+_[A-Z][a-z]+", names(rf_data))]
+  rf_data[, (coach_cols) := NULL]
+  
+  # Remove specific coach columns
+  rf_data[, Bill_OBrien := NULL] 
+  rf_data[, Kevin_OConnell := NULL]
+  rf_data[, DeMeco_Ryans := NULL]
+  
+  # Prepare the data for Random Forest
+  rf_data[, my_id := NULL]  # Remove ID column
+  y <- as.factor(rf_data$attempt)  # Convert response to factor
+  rf_data[, attempt := NULL]  # Remove response from predictors
+  
+  # Train Random Forest model
+  rf_model <- randomForest(x = rf_data, 
+                          y = y,
+                          ntree = 400)
+  
+  # Get probability predictions (z) for ALL data
+  z <- predict(rf_model, rf_data, type = "prob")[,2]  # Get probabilities for class 1
+
+  
+  # Calculate residuals
+  residuals <- as.numeric(as.character(y)) - z
+  
+  # Calculate GIMR (lambda) - Generalized inverse mills ratio
+# Option 1: Traditional Inverse Mills Ratio
+  #GIMR <- dnorm(z, mean = mean(z), sd = sd(z)) / (1 - z)
+# GIMR <- dnorm(z) / (1 - pnorm(z))
+  
+ GIMR <- dnorm(z)/(1-z)
+  # make gimr completly random
+  #GIMR <- rnorm(length(z))
+# Option for different treatment based on attempt value (1 or 0)
+# GIMR <- ifelse(y == 1,
+#               dnorm(qnorm(z)) / (1 - z),     # For attempt = 1
+#               dnorm(qnorm(1-z)) / z)         # For attempt = 0
+  
+
+  # Add GIMR to the data
+select_data[, GIMR := GIMR]
+
+  # Create a data.table with just my_id and GIMR from select_data
+  GIMR_dt <- data.table(my_id = select_data$my_id, GIMR = GIMR)
+  
+  # Add GIMR to outcome_data by matching on my_id
+  outcome_data[GIMR_dt, GIMR := i.GIMR, on = "my_id"]
+  
+  # in outcome dat aif the gimr is above 5 then kill that row with data table syntax
+  ind <- which(outcome_data$GIMR > 5)
+  outcome_data <- outcome_data[-ind, ]
+  #and to select
+  indselect <- which(select_data$GIMR > 5)
+  select_data <- select_data[-indselect, ]
+  
+
+  # Remove GIMR from select_data so it's not in the attempt models
+  select_data[, GIMR := NULL]
+  
+  select_data[, my_id := NULL]
+
+  # Data preparation for outcome models
+  # Create copies for different models
+  outcome_data_player <- copy(outcome_data)
+  outcome_data_starter <- copy(outcome_data)
+  
+# Clean data for both models
+for (dt in list(outcome_data_player, outcome_data_starter)) {
+  dt[, my_id := NULL]
+  dt[, yardline_31_40 := NULL]
+  dt[, year2022_team_CLE := NULL]
+
+  # Remove attendance variables
+  dt[, attendance_pct := NULL]
+  dt[, attendance_raw := NULL]
+
+  # Identify columns with "_present" in the name
+  present_cols <- grep("_present", names(dt), value = TRUE)
+  
+  # First, remove columns that are entirely 1 or entirely 0
+  for (col in present_cols) {
+    # Check if column is entirely 1 or entirely 0
+    if (all(dt[[col]] == 1) || all(dt[[col]] == 0)) {
+      dt[, (col) := NULL]
+      # Remove from the list of present columns
+      present_cols <- setdiff(present_cols, col)
+    }
+  }
+  
+  # Create patterns for positions to keep
+  positions_to_keep <- c(
+    # Offense
+    "QB_present$",              # QB
+    "WR[1-3]_present$",             # WR1, WR2, WR3
+    "RB1*_present$",                # RB (with or without 1)
+   # dont keep OL due to multicolinearity
+    # Defense
+    "DL[2-4]_present$",             # DL2, DL3, DL4
+    "LB[3-4]_present$",              # LB3, LB4
+    "CB[1-3]_present$",             # CB1, CB2, CB3
+    "S[1-2]_present$"                # S1, S2
+  )
+  
+  # Create a single pattern to match all positions to keep
+  keep_pattern <- paste0("(", paste(positions_to_keep, collapse = "|"), ")")
+  
+  # Find columns to keep based on the pattern
+  cols_to_keep <- grep(keep_pattern, present_cols, value = TRUE)
+  
+  # Find all present columns to remove (those not matched by our pattern)
+  cols_to_remove <- setdiff(present_cols, cols_to_keep)
+  
+  # Remove the unwanted present columns
+  if (length(cols_to_remove) > 0) {
+    dt[, (cols_to_remove) := NULL]
+  }
+  
+  # For outcome_data_starter, duplicate non-starter _present columns with starter_ prefix
+  if (identical(dt, outcome_data_starter)) {
+    # Find all _present columns that don't already have starter_ prefix
+    present_cols_no_prefix <- grep("_present$", names(dt), value = TRUE) 
+    present_cols_no_prefix <- present_cols_no_prefix[!grepl("^starter_", present_cols_no_prefix)]
+    
+    # Add duplicates with starter_ prefix
+    for (col in present_cols_no_prefix) {
+      new_col <- paste0("starter_", col)
+      dt[, (new_col) := dt[[col]]]
+    }
+  }
+}
+
+  # Updated pattern matching for player/starter models after column name transformation
+  
+  # For player models, remove starter columns
+  player_cols <- grep("^starter_", names(outcome_data_player), value = TRUE)
+  for (col in player_cols) {
+    outcome_data_player[, (col) := NULL]
+  }
+  
+  # For starter models, remove regular player columns - updated pattern matching
+  # We need to filter out non-starter columns that aren't utility columns (like 'week', 'yardline', etc.)
+  
+  # First, identify all position-related columns that aren't starter columns
+# First, identify all position-related columns that aren't starter columns
+# Updated to include individual OL positions (OL1-OL8)
+position_prefixes <- c("QB", "QB[2-3]", "RB", "RB2", "FB", "FB2", 
+                       "WR\\d+", "TE\\d+", 
+                       "OL\\d+",  # Changed from "OL" to "OL\\d+" to match OL1, OL2, etc.
+                       "DL\\d+", "LB\\d+", "CB\\d+", "S\\d+")
+
+# Create regex pattern for position columns
+position_pattern <- paste0("^(", paste(position_prefixes, collapse = "|"), ")_")
+  
+  # Find all position columns that are NOT starter columns
+  player_position_cols <- grep(position_pattern, names(outcome_data_starter), value = TRUE)
+  player_position_cols <- player_position_cols[!grepl("^starter_", player_position_cols)]
+  
+  # Remove these from starter model
+  for (col in player_position_cols) {
+    outcome_data_starter[, (col) := NULL]
+  }
+  
+  # Ensure conversion is numeric
+  for (dt in list(outcome_data_player, outcome_data_starter)) {
+    dt[, conversion := as.numeric(as.character(conversion))]
+  }
+  
+  # MODEL 1: Player model with GIMR
+  ols_model_player <- lm(conversion ~ ., data = outcome_data_player)
+  probit_model_player <- glm(conversion ~ ., data = outcome_data_player, family = binomial(link = "probit"))
+  logit_model_player <- glm(conversion ~ ., data = outcome_data_player, family = binomial(link = "logit"))
+  
+  # MODEL 2: Starter model with GIMR
+  ols_model_starter <- lm(conversion ~ ., data = outcome_data_starter)
+  probit_model_starter <- glm(conversion ~ ., data = outcome_data_starter, family = binomial(link = "probit"))
+  logit_model_starter <- glm(conversion ~ ., data = outcome_data_starter, family = binomial(link = "logit"))
+
+  # MODEL 3: OLS model with GIMR and attempt
+  ols_model_attempts <- lm(attempt ~ ., data = select_data)
+  probit_model_attempts <- glm(attempt ~ ., data = select_data, family = binomial(link = "probit"))
+  logit_model_attempts <- glm(attempt ~ ., data = select_data, family = binomial(link = "logit"))
+  
+  # Return results as a list
+  results <- list(
+    ols_model_player = ols_model_player,
+    probit_model_player = probit_model_player,
+    logit_model_player = logit_model_player,
+    ols_starter_model = ols_model_starter,
+    probit_starter_model = probit_model_starter,
+    logit_starter_model = logit_model_starter,
+    ols_attempts_model = ols_model_attempts,
+    probit_attempts_model = probit_model_attempts,
+    logit_attempts_model = logit_model_attempts,
+    GIMR = GIMR,
+    z = z
+  )
+  
+  return(results)
+}
+
+# Define the datasets to analyze
+datasets <- list(
+  list(outcome = "processed_predict_ccafd_off_grades.csv.csv.gz", select = "processed_predict_ccfd_off_grades.csv.csv.gz")
+)
+
+# Initialize the all_outcome_models list here, before the loop
+all_outcome_models <- list()
+
+# Process each dataset pair
+for (i in 1:length(datasets)) {
+  # Clean up dataset name for display
+  dataset_path <- datasets[[i]]$outcome
+  dataset_name <- gsub("processed_predict_ccafd_|.csv.csv.gz", "", dataset_path)
+  
+  # Make dataset name more readable
+  dataset_name <- gsub("_", " ", dataset_name)
+  dataset_name <- gsub("off", "Offense", dataset_name)
+  dataset_name <- gsub("def", "Defense", dataset_name)
+  dataset_name <- tools::toTitleCase(dataset_name)
+  
+  # Read the data
+  cat(sprintf("Reading data: %s\n", datasets[[i]]$outcome))
+  outcome_data <- fread(datasets[[i]]$outcome)
+  
+  cat(sprintf("Reading data: %s\n", datasets[[i]]$select))
+  select_data <- fread(datasets[[i]]$select)
+  
+  # Apply the column name transformation to both datasets
+  outcome_data <- transform_column_names(outcome_data)
+  select_data <- transform_column_names(select_data)
+  
+  # Run the analysis with our function
+  results <- run_heckman(
+    select_data = select_data, 
+    outcome_data = outcome_data,
+    n_validation = 1
+  )
+  
+  # Store models for QB depth analysis
+  all_outcome_models[[dataset_name]] <- list(
+    ols_model_player = results$ols_model_player,
+    probit_model_player = results$probit_model_player,
+    logit_model_player = results$logit_model_player,
+    ols_starter_model = results$ols_starter_model,
+    probit_starter_model = results$probit_starter_model,
+    logit_starter_model = results$logit_starter_model,
+    ols_attempts_model = results$ols_attempts_model,
+    probit_attempts_model = results$probit_attempts_model,
+    logit_attempts_model = results$logit_attempts_model
+  )
+}
+  
+```
+
+```{r}
+outcome_data <- results$outcome_data
+```
+
+
+```{r}
+# print out the tvalue of the GIMR of each model 
+for (i in 1:length(datasets)) {
+  dataset_path <- datasets[[i]]$outcome
+  dataset_name <- gsub("processed_predict_ccafd_|.csv.csv.gz", "", dataset_path)
+  
+  # Make dataset name more readable
+  dataset_name <- gsub("_", " ", dataset_name)
+  dataset_name <- gsub("off", "Offense", dataset_name)
+  dataset_name <- gsub("def", "Defense", dataset_name)
+  dataset_name <- tools::toTitleCase(dataset_name)
+  
+  # Print the dataset name
+  cat(sprintf("Dataset: %s\n", dataset_name))
+  
+  # Get the models for this dataset
+  models <- all_outcome_models[[dataset_name]]
+  
+  # Print the t-values for the GIMR variable in each model
+  cat("OLS Player Model:\n")
+  print(summary(models$ols_model_player)$coefficients["GIMR", "t value"])
+  
+  cat("Probit Player Model:\n")
+  print(summary(models$probit_model_player)$coefficients["GIMR", "z value"])
+  
+  cat("Logit Player Model:\n")
+  print(summary(models$logit_model_player)$coefficients["GIMR", "z value"])
+  
+  cat("OLS Starter Model:\n")
+  print(summary(models$ols_starter_model)$coefficients["GIMR", "t value"])
+  
+  cat("Probit Starter Model:\n")
+  print(summary(models$probit_starter_model)$coefficients["GIMR", "z value"])
+  
+  cat("Logit Starter Model:\n")
+  print(summary(models$logit_starter_model)$coefficients["GIMR", "z value"])
+}
+```
+
+
+
+# First chunk: Plot distributions of z values in outcome data
+```{r}
+# Get z values from the outcome data
+# We'll use the z values that were added to outcome_data during the Heckman model process
+z_values <- outcome_data$z  # Assuming z values were added to outcome_data
+
+# Create a data frame for plotting
+plot_data <- data.frame(z = z_values)
+
+# Set up plotting layout
+par(mfrow = c(1, 2), mar = c(4, 4, 3, 1))
+
+# Density plot of z values
+plot(density(plot_data$z, na.rm = TRUE), 
+     main = "Density of z Values in Outcome Data",
+     xlab = "z (Selection Probability)", 
+     ylab = "Density",
+     col = "darkblue", 
+     lwd = 2)
+
+# Add a line for the mean
+abline(v = mean(plot_data$z, na.rm = TRUE), col = "red", lty = 2)
+text(mean(plot_data$z, na.rm = TRUE) + 0.05, 
+     max(density(plot_data$z, na.rm = TRUE)$y) * 0.8, 
+     paste("Mean =", round(mean(plot_data$z, na.rm = TRUE), 3)),
+     col = "red")
+
+# Histogram of z values
+hist(plot_data$z, 
+     main = "Distribution of z Values in Outcome Data",
+     xlab = "z (Selection Probability)", 
+     col = "lightblue",
+     border = "darkblue",
+     breaks = 30)
+
+# Add a line for the mean
+abline(v = mean(plot_data$z, na.rm = TRUE), col = "red", lty = 2)
+
+# Reset plot layout
+par(mfrow = c(1, 1))
+```
+
+# Second chunk: Plot distributions of GIMR values in outcome data
+```{r}
+# Get GIMR values from the outcome data
+gimr_values <- outcome_data$GIMR
+
+# Create a data frame for plotting
+plot_data <- data.frame(gimr = gimr_values)
+
+# Set up the plotting layout
+par(mfrow = c(1, 2), mar = c(4, 4, 3, 1))
+
+# Density plot of GIMR values
+plot(density(plot_data$gimr, na.rm = TRUE), 
+     main = "Density of GIMR Values in Outcome Data",
+     xlab = "GIMR", 
+     ylab = "Density",
+     col = "darkgreen", 
+     lwd = 2)
+
+# Add a line for the mean
+abline(v = mean(plot_data$gimr, na.rm = TRUE), col = "red", lty = 2)
+text(mean(plot_data$gimr, na.rm = TRUE) + 0.5, 
+     max(density(plot_data$gimr, na.rm = TRUE)$y) * 0.8, 
+     paste("Mean =", round(mean(plot_data$gimr, na.rm = TRUE), 3)),
+     col = "red")
+
+# Histogram of GIMR values
+hist(plot_data$gimr, 
+     main = "Distribution of GIMR Values in Outcome Data",
+     xlab = "GIMR", 
+     col = "lightgreen",
+     border = "darkgreen",
+     breaks = 30)
+
+# Add a line for the mean
+abline(v = mean(plot_data$gimr, na.rm = TRUE), col = "red", lty = 2)
+
+# Reset plot layout
+par(mfrow = c(1, 1))
+
+# Optional: Add summary statistics
+cat("Summary of GIMR values in outcome data:\n")
+print(summary(plot_data$gimr))
+```
+

@@ -1,13 +1,20 @@
 ---
 title: "A Predictive and Causal Analysis of Fourth Down Attempts in the NFL"
-output: pdf_document
+author: "Simon P. Raymond"
+output: 
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo=FALSE)
 ```
 
-# Context
+# Introduction
+
+## Context
 
 The National Football League is a multi-billion dollar industry that has seen rapid growth within the American and International entertainment. This growth has placed more and more importance on the performance of NFL teams as they fight to win games to increase the popularity of their team as Davis and End (2010) argue that successful NFL franchises have measurable economic impacts on their local areas. This revelation has given rise to a age of data analytics in the NFL as teams seek to gain competitive advantages over their rivals. GMs and coaches then explore different avenues of strategies.
 
@@ -15,19 +22,19 @@ In the NFL, a team's offensive possession is structured around a series of four 
 
 In American Football many teams have shifted to being more aggresive on fourth down. Most famously are the Detroit Lions. Since the arrival of their current head coach Dan Campbell, the lions adopted a aggressive strategy to match their aggressive “biting off knee caps” mentality (Birkett, 2023). While the lions have seen success for the first time in years, they have also been criticized for their aggressive play calling. This was highlighted in the 2023-24 playoff divisional round game in which the Lions failed a fourth down attempt that was painted as unnecessary (Sporting News, 2024). After this mid-game failure there seemed to be a shift in momentum and the lions lost the game.
 
-# Research Problem and Glimpse of Findings
+## Research Problem and Key Findings
 
 A result like this causes one ask the question “Did the Lions make the right call?”. This question seems to be getting answered as “yes” by the current literature. However, we need to know if different teams should "go-for-it" or not "go-for-it" depending on their situation and team make up. For example, it could be argued that the lions should have attempted the crucial fourth down in the 2023-24 playoff divisional round game. However, if the Panthers (which were a significantly worse team) were is that situation it could be argued that they should not have been as aggressive. This is because the panthers could have had a worse chance of being able to convert on fourth down.
 
 On top of this, we must be weary of any recommendation that is given to a head coach. The truth is that we are not on the field, in the locker rooms, or in team meeting. This means coaches may know more then us in certain game time decision. We must approach this topic with the idea of being more practical and clear to coaches. If we are simply pointing our algorithms and giving black-box predictions we lose all credibility as one would be oblivous to the true depth of decision making in the NFL.
 
-In our analysis we discover via our GIMR that coaches are able to factor in variables that are unseen in our data in the decision making process on 4th downs. Coaches also show signs of being able to properly evaluate the performance of players in fourth down situations. 
+In our analysis we discover via our Generalized Inverse Mills Ratio that coaches are able to factor in variables that are unseen in our data in the decision making process on 4th downs. Coaches also show signs of being able to properly evaluate the performance of players in fourth down situations. However, certain archetypes of quarterback are not being properly evaluated by coaches and factored into decision making by coaches.
 
-# Research Questions
+## Key Research Questions
 
 This leads us to have a need to answer some key questions about fourth downs in the NFL. First, are coaches in the NFL actually better are making these decision then analysts? Second, is what key variables about players have predictive power in fourth down attempts? In other words, are there players that are more important in fourth down situations when compared to other situations. Finally, do these key variables about players have a causal effect on the outcome of fourth down attempts? Answering these questions will allow coaches to look for key signals in fourth down situations and to know which players to start on that fourth down if it is decided to attempt. This also can be applied in discovering specialty players that are overlooked due to poor performances in situations that are not similar to fourth down.
 
-# Liturature Review
+# Literature Review
 
 Much discourse revolves around the idea that NFL coaches are acting overly averse to risk, which is lowering their expected wins. Romer (2006) found that teams had begun to move towards a more conservative or safe strategy in the NFL. He argues that teams value successful gambles more then the expected win percentage in a game. He theorizes that the poor decision making is either due to risk aversion or it is due to poor information.
 
@@ -44,25 +51,23 @@ Despite these common findings in other sports there does seem to be some evidenc
 
 Lehman & Hahn (2013) looked to identify momentum across and within games in the NFL. Within-period momentum was found to encourage teams to take more risks. Negative within-period momentum was in turn found to encourage teams to take less risks. It was also discovered that across-period momentum has an effect only until a within-period momentum was established in a game
 
-# Gap in Current Research
+## Research Gaps
 
 A gap in the current research is caused by the lack in quality data. Currently we observe many studies include team-aggregated grades or summary statistics about teams that are playing against each other. While some situations can allow this, our non-parametric models will be able to handle data with thousands of different variables. To take advantage of this, we will have information about every single player that is on the field when the ball is snapped. This will allow us to have better prediction power then previous researchers. These non-parametric models will also allow us to discover key player specific variables that can allow for further causal inference with specific on-field positions.
 
-# Roadmap 
+# Data
 
-Go over this
-
-# Data Sources
+## Sources
 
 Our data was pulled from two main sources. 
 
 As a base the nflverse package provided in R gave us play by play data for the years of 2017 to 2023. This includes basic game information and the IDs of players that participated each play. The reason for our cutoff of 2017 is due to the NFL only putting tracking chips in players jerseys as of the 2016 season. The 2016 season however still had many inconsistencies which leads us to drop the year. 
 
-The key part then is the merging of Pro Football Focus's aggregated weekly data. The statistics are downloaded as premium player reports on a weekly bases and then aggrigated to time lengths of 2 weeks, 12 weeks and 3 years. These time length have been arbitrarly picked which leaves room for future research. It was found that the 12 week timeframe better captured the significance and value of players. This is due to the 2 week timeframe struggling with noise while the 3 year timeframe is not sensitive enough to emerging or aging players.
+The key part then is the merging of Pro Football Focus's aggregated weekly data. The statistics are downloaded as premium player reports on a weekly bases and then aggregated to time lengths of 2 weeks, 12 weeks and 3 years. These time length have been arbitrarly picked which leaves room for future research. It was found that the 12 week time frame better captured the significance and value of players. This is due to the 2 week timeframe struggling with noise while the 3 year timeframe is not sensitive enough to emerging or aging players.
 
-Players from the PFF data set where merged into our base play by play data set based on a 12 step algorithm that matched ids accross the twos sources. The steps included pre-match ids, and then players matched on names, teams and positions. 
+Players from the PFF data set where merged into our base play by play data set based on a 12 step algorithm that matched different player IDs accross the two sources. The steps included pre-match ids, and then was followed by maches based on names, teams and positions etc. 
 
-As a final note attendance data was also scrapped from pro football reference.
+As a final note attendance data was also scrapped from Pro Football Reference. This data was then merged into our base data set to allow for the control of fan attendance in our models.
 
 
 ```{r off-p-sum, fig.cap="Key Data Summary", out.width="100%"}
@@ -70,17 +75,13 @@ knitr::include_graphics("table_images/sum1.png")
 ```
 
 
-# Variable Selection
+## Variable Selection
 
-Our variables that we work with fall into one of two categories. They are either statistics about players or about the situation of the play. The player variables consist of variables that describe who was on the field. We also have access to player variables of the starting players on each team based on depth chart data provided by nflverse. In both situations the players are sorted into columns based on depth chart position. For example, the starting QB is also in the offense_player_1 slot to allow us to maintain consistancy. 
+Our variables that we work with fall into one of two categories. They are either statistics about players or about the situation of the play. The player variables consist of variables that describe who was on the field. We also have access to player variables of the starting players on each team based on depth chart data provided by nflverse. In both situations the players are sorted into columns based on depth chart position. For example, the starting QB is also in the offense_player_1 slot to allow us to maintain consistancy. Obvously our attempt models are forced to only use the starter player statistics as we cannot use the players on the field to predict the type of player that was called.
 
-In our models to predict conversions in third or fourth downs we use the following base collumns:
+# Methodology
 
-Our models that are used to predict the attempt of a fourth downs conversion then use the following base collums:
-
-Obvously our attempt models are forced to only use the starter player statistics as we cannot use the players on the field to predict the type of player that was called.
-
-# Methodology and Tools
+## Tools
 
 The following models include several categories of control variables: *Game Situation Variables* capturing tactical contexts like distance needed, timeouts remaining, and time factors; *Coach Variables* reflecting experience, tenure, background, and historical decision patterns; *Team Stats* measuring performance metrics, efficiency ratings, and formation tendencies; *Season/Team FE* controlling for organizational factors unique to each team-season combination; *Coach FE* isolating individual coaching philosophies and tendencies; *Player Presence* binary indicators tracking which specific players or positions are on the field; *Control Def. Players* accounting for defensive quality, positioning, and scheme; and *Control Off. Players* measuring offensive personnel capabilities and skill ratings. 
 
@@ -90,12 +91,14 @@ In our data we often had 20,000+ different player variables. This clearly is a s
 
 Similarly we can enact Random Forest to receive a OOB AUC. Random Forest will also let us receive insight into what variables have high importance in predictions based on MDA and MDI. This ranking of variables not only allows us to feature select for XGBoosting but it also assisted in watching what variables could be considered for causal analysis.
 
-For the causal analysis we will be enploying the a form of the Heckman correction. This is due to the selection bais in fourth downs. Since not all fourth downs are attempted, we do not have data on the fourth downs that never happened. We look to deal with this bias by using a evolved verison of Heckman's original model. In the original paper it was proposed to use a two step process. In the selection step one would predict the probability of being selected while including a variable that is exogenous to the actual outcome that we are interested in. This estimated probability is then converted into the IMR and used to control for selection bias in the outcome step. This process however assumes linear relationships in the selection stage.
+For the causal analysis we will be employing the a form of the Heckman correction. This is due to the selection bais in fourth downs. Since not all fourth downs are attempted, we do not have data on the fourth downs that never happened. We look to deal with this bias by using a evolved verison of Heckman's original model. In the original paper it was proposed to use a two step process. In the selection step one would predict the probability of being selected while including a variable that is exogenous to the actual outcome that we are interested in. This estimated probability is then converted into the IMR and used to control for selection bias in the outcome step. This process however assumes linear relationships in the selection stage.
 
 In our case we are in fact not dealing with linear relationships in the selection stage. This is discovered by how we have a increase of almost 20 %pts in AUC when predicting attempts with a XGBoost model instead of a linear model. Therefore our first step in correcting selection bias looks to predict the probability of a attempt of a fourth down. This prediction then is converted into a Generalized IMR that is not bound to the assumptions of a IMR. We then place our GIMR in our outcome equation when estimating the conversion of a fourth down to control for selection bias. 
 
+## Framework
 
-\section{Step 1: Selection Model}
+
+### Selection Model
 
 Model the binary choice to attempt a play:
 
@@ -110,6 +113,12 @@ The probability is modeled as:
 \begin{equation}
 z_i = \text{RF}(\mathbf{X}_i, \mathbf{K}_i, \mathbf{P}_i)
 \end{equation}
+
+The distribution of z is:
+
+```{r, out.width="100%"}
+knitr::include_graphics("offense_probs_dist.png")
+```
 
 where:
 \begin{itemize}
@@ -138,7 +147,7 @@ The first and second order conditions for $\lambda_i$ are:
 
 Thus $\lambda_i$ is strictly increasing and convex in $z_i$.
 
-\section{Step 2: Outcome Model}
+### Outcome Model
 
 Model the binary conversion outcome for attempted plays:
 
@@ -148,6 +157,12 @@ Model the binary conversion outcome for attempted plays:
 0 & \text{if attempt fails}
 \end{cases}
 \end{equation}
+
+The inputed GIMR then has the following distribution:
+
+```{r, out.width="100%"}
+knitr::include_graphics("offense_gimr_dist.png")
+```
 
 Linear probability model with selection correction:
 \begin{equation}
@@ -168,7 +183,9 @@ Note: Kicker grades ($\mathbf{K}_i$) and punter grades ($\mathbf{P}_i$) serve as
 Models are estimated separately for offensive outcomes (grades, yards, completions) and defensive outcomes (stops, grades, tackles).
 
 
-# Findings 
+# Results
+
+## Exogeniety of Kicker and Punter Grades
 
   A key feature in our sample selection correction model, is the exogeniety of a variable that influences the selection equation. In American Football there is the luxery of using third down conversions as a selection bias free area. This is due to how conditions such as desperation or play calling cause a 3rd down to be treated similarly to a fourth down by the coaches. A fourth down is a teams last attempt for that offensive drive. While not in all, there are many cases of third down provide the similar conditions in terms of the coaches decision making. For example if the ball is on a teams own 20 yard line and they are on 3rd and 10, the coach will treat this attempt as a "last chance". This is due to the fact that if the team does not convert on 3rd down they will be forced to punt the ball. There is no situation here where the team can even consider kicking a field goal.
 
@@ -188,29 +205,16 @@ knitr::include_graphics("table_images/kick2.png")
 
 As a note while punters do not show signs of significantly affecting the 4th down attempt probability, they are included. The logic for them remains the same as the kickers and therefore there is no harm in including them in the selection model. 
 
-\newpage
 
-### Offensive Grades Model Results
-
-```{r offense-grades-table, fig.cap="Offense Grades Table", out.width="100%"}
-knitr::include_graphics("table_images/off1.png")
-```
-
-\newpage 
-
-### Defensive Grades Model Results
-
-```{r defense-grades-table, fig.cap="Defense Grades Table", out.width="100%"}
-knitr::include_graphics("table_images/def1.png")
-```
-
-## GIMR
+## Generalized Inverse Mills Ratio (GIMR)
 
 In examining the following tables the significance of our GIMR is confirmed. This tells us that coaches in the NFL see factors that we cannot and act on them in the proper way. When a coach is more likly to attempt a fourth down conversion attempt that they are then also more likely to convert that fourth down attempt due to unseen variables. 
 
-## Players
+## Player Analysis
 
-The exogeniety of kicker grades then allows a bias-free analysis of individual players and coaches. Players are evaluated in terms of their performance in the 12 week timeframe. This time frame is arbitrary and can be a source of future research with how to optimize the measurment of player values. 
+### Pretense
+
+The exogeniety of kicker grades then allows a bias-free analysis of individual players and coaches. Players are evaluated in terms of their performance in the 12 week timeframe. This time frame is arbitrary and can be a source of future research with how to optimize the measurement of player values. 
 
 Players that are used are either "On-Field" or "Starter" players. On-Field players are players that are on the field during the fourth down attempt. Starter players are the players that are listed as the starter on the depth chart. In both situations players are sorted via depth chart postings.
 
@@ -220,19 +224,55 @@ The offensive and defensive models are both measured in three different ways. Fo
 
 To evaluate a coaches' decision making, the Attempt Models are able to show if a coach is properly deciding to Attempt a fourth down based on features of players that influence the conversion of a fourth down. 
 
-### Offensive Player Joint Significance 
+\newpage
+
+### Individual Player Offensive Grades Model Results
+
+```{r offense-grades-table, fig.cap="Offense Grades Table", out.width="100%"}
+knitr::include_graphics("table_images/off1.png")
+```
+
+\newpage 
+
+### Individual Player Defensive Grades Model Results
+
+```{r defense-grades-table, fig.cap="Defense Grades Table", out.width="100%"}
+knitr::include_graphics("table_images/def1.png")
+```
+
+\newpage 
+
+### Offensive Player Joint Significance Results
 
 ```{r offense-grades-model, fig.cap="Offense Grades Model Results", out.width="100%"}
 knitr::include_graphics("table_images/off2.png")
 ```
 
-### Defensive Player Joint Significance 
+### Defensive Player Joint Significance Results 
 
 ```{r defense-grades-model, fig.cap="Defense Grades Model Results by Position Groups", out.width="100%"}
 knitr::include_graphics("table_images/def2.png")
 ```
 
-### Offensive Players
+\newpage 
+
+### Offense Joint Significance Results
+
+```{r off3, fig.cap="Joint Significance Offense", out.width="100%"}
+knitr::include_graphics("table_images/off3.png")
+```
+
+
+### Defense Joint Significance Results
+
+```{r def3, fig.cap="Joint Significance Defense", out.width="100%"}
+knitr::include_graphics("table_images/def3.png")
+```
+
+## Discusion
+
+The interpretation of Starter and On-Field Models leads us to ask why there is a difference in quality of statistical significance. In our F-Statistic tables Starter Models appear to capture the performance of positions and teams better. Individual player features also seem to measure player performance better as show by a larger amount of significant variables. This leads us to believe that Starter Models have less noise in measurement then On-Field Models due to a higher consistency of players. On-field measurements are subject to players being subbed in and out of the game. While it provides greater detail in measurement it makes player slots have more variance in terms of which players are present where. For example the LB 2 of a team can be slotted into either LB slot 1 or 2 depending on the availability of the LB 1 in a On-Field play. However for a given game that LB 2 player will stay in the second slot for the entire game. 
+
 
 Quarterbacks have been undoubtedly held as the most important player on the field. Signs of joint significance are found across Starter, On-Field and Attempt models. On-Field models show clear significance while the Attempt model also shows signs of statistical significance. 
 
@@ -244,25 +284,13 @@ Coaches are including wide receivers in the decision making process as seen by t
 
 What is the most interesting is that the Grades of the team's running back are not found to be significant in any model. This is the case even despite how fourth downs often are run plays due to the amount of short yardage situations.
 
-### Defensive Players
-
-In terms of the defense there is not enough evidence to make statements about individual player features' significance. However, when we test for joint significance of the defensive players there is signs of significance with the Defensive Line and Corner backs in which the the coaches respond to.
-
-### Offense Joint Significance
-
-```{r off3, fig.cap="Joint Significance Offense", out.width="100%"}
-knitr::include_graphics("table_images/off3.png")
-```
-
-### Defense Joint Significance
-
-```{r def3, fig.cap="Joint Significance Defense", out.width="100%"}
-knitr::include_graphics("table_images/def3.png")
-```
+In terms of the defense there is not enough evidence to make statements about individual player features' significance. However, when we test for joint significance of the defensive players there is signs of significance with the Defensive Line and Cornerbacks. Coaches then only produce weakly significant linear results with their attempt model for Cornerbacks. The decision to attempt a fourth down is seen to completely overlook the quality of a teams Starting linebacker core.
 
 \newpage
 
-# References {.unnumbered}
+# References
+
+[Back to Table of Contents](#table-of-contents)
 
 \label{cook2022}Cook, J. A. (2022). Sample-Selection-Adjusted Random Forests. International Journal of Data Science and Analytics, 14, 375-388.  http://dx.doi.org/10.2139/ssrn.4225014
 
@@ -299,4 +327,3 @@ knitr::include_graphics("table_images/def3.png")
 \label{davis2010}Davis, M. C., & End, C. M. (2010). A winning proposition: The economic impact of successful National Football League franchises. *Economic Inquiry*, 48(1), 39–50. https://doi.org/10.1111/j.1465-7295.2008.00124.x
 
 \label{birkett2023}Birkett, D. (2024, January 21). On this date: Memorable kneecap speech. Sports Illustrated. Retrieved from https://www.si.com/nfl/lions/news/on-this-date-memorable-kneecap-speech
-
