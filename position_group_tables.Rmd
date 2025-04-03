@@ -534,7 +534,7 @@ control_header_idx <- nrow(joint_test_data) + 1
         caption = paste(dataset_name, "Model Results - Position Groups"),
         align = c('l', rep('c', ncol(final_table) - 1)),
         escape = FALSE) %>%
-    kable_styling(latex_options = c("scale_down", "hold_position"),
+    kable_styling(latex_options = c("scale_down", "hold_position", "striped"),
                   full_width = FALSE,
                   font_size = 9) %>%
     row_spec(0, bold = TRUE) %>%

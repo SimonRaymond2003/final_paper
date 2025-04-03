@@ -464,7 +464,7 @@ format_and_print_table <- function(table_data, control_data, caption) {
         caption = caption,
         align = c('l', rep('c', 9)),
         escape = FALSE) %>%
-    kable_styling(latex_options = c("scale_down", "hold_position"),
+    kable_styling(latex_options = c("scale_down", "hold_position", "striped"),
                   full_width = FALSE,
                   font_size = 10) %>%
     row_spec(0, bold = TRUE) %>%

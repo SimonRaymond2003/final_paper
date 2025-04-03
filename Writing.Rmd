@@ -130,7 +130,7 @@ where:
 
 The generalized inverse Mills ratio is:
 \begin{equation}
-\lambda_i = \frac{z_i}{1-z_i}
+\lambda_i = \frac{\phi(z_i)}{1-z_i}
 \end{equation}
 
 ```{r, out.width="100%"}
@@ -140,9 +140,10 @@ knitr::include_graphics("function_plot.png")
 This functional form shifts the weights to emphasis situations where the probability of attempting a play is close to 1.
 
 The first and second order conditions for $\lambda_i$ are:
+
 \begin{align*}
-\text{FOC: } \frac{\partial \lambda_i}{\partial z_i} &= \frac{1}{(1-z_i)^2} > 0 \text{ for } z_i < 1 \\
-\text{SOC: } \frac{\partial^2 \lambda_i}{\partial z_i^2} &= \frac{2}{(1-z_i)^3} > 0 \text{ for } z_i < 1
+\frac{d\lambda}{dz} &= \frac{\phi(z)(z^2-z+1)}{(1-z)^2} > 0 \\
+\frac{d^2\lambda}{dz^2} &= \frac{\phi(z)[-z^3+2z^2-2z+3]}{(1-z)^3} > 0
 \end{align*}
 
 Thus $\lambda_i$ is strictly increasing and convex in $z_i$.

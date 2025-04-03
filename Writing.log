@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.3.31)  1 APR 2025 12:53
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.3.31)  2 APR 2025 01:45
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -430,11 +430,11 @@ Package pdftex.def Info: table_images/sum1.png  used on input line 265.
 [4 <./table_images/sum1.png>]
 
 [5]
-<offense_probs_dist.png, id=90, 578.16pt x 433.62pt>
+<offense_probs_dist.png, id=90, 803.0pt x 602.25pt>
 File: offense_probs_dist.png Graphic file (type png)
 <use offense_probs_dist.png>
 Package pdftex.def Info: offense_probs_dist.png  used on input line 356.
-(pdftex.def)             Requested size: 469.75385pt x 352.31538pt.
+(pdftex.def)             Requested size: 469.7715pt x 352.32861pt.
 LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 361.
 (/Users/user/Library/TinyTeX/texmf-dist/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
@@ -447,81 +447,83 @@ Package pdftex.def Info: function_plot.png  used on input line 371.
 
 
 [6{/Users/user/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/Users/user/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}{/Users/user/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathex.enc}{/Users/user/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}{/Users/user/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc} <./offense_probs_dist.png>]
-<offense_gimr_dist.png, id=107, 578.16pt x 433.62pt>
+<offense_gimr_dist.png, id=107, 803.0pt x 602.25pt>
 File: offense_gimr_dist.png Graphic file (type png)
 <use offense_gimr_dist.png>
-Package pdftex.def Info: offense_gimr_dist.png  used on input line 397.
-(pdftex.def)             Requested size: 469.75385pt x 352.31538pt.
+Package pdftex.def Info: offense_gimr_dist.png  used on input line 398.
+(pdftex.def)             Requested size: 469.7715pt x 352.32861pt.
 
 
 [7 <./function_plot.png>]
 
 [8 <./offense_gimr_dist.png>]
-<table_images/kick1.png, id=123, 1664.2175pt x 614.295pt>
+<table_images/kick1.png, id=123, 1664.2175pt x 622.325pt>
 File: table_images/kick1.png Graphic file (type png)
 <use table_images/kick1.png>
-Package pdftex.def Info: table_images/kick1.png  used on input line 456.
-(pdftex.def)             Requested size: 469.76141pt x 173.39806pt.
+Package pdftex.def Info: table_images/kick1.png  used on input line 457.
+(pdftex.def)             Requested size: 469.76141pt x 175.66469pt.
 <table_images/kick2.png, id=124, 1499.6025pt x 913.4125pt>
 File: table_images/kick2.png Graphic file (type png)
 <use table_images/kick2.png>
-Package pdftex.def Info: table_images/kick2.png  used on input line 466.
+Package pdftex.def Info: table_images/kick2.png  used on input line 467.
 (pdftex.def)             Requested size: 469.74585pt x 286.12364pt.
 
 
 [9 <./table_images/kick1.png>]
 
 [10 <./table_images/kick2.png>]
-<table_images/off1.png, id=137, 1672.2475pt x 1421.31pt>
+
+[11]
+<table_images/off1.png, id=141, 1726.45pt x 1465.475pt>
 File: table_images/off1.png Graphic file (type png)
 <use table_images/off1.png>
-Package pdftex.def Info: table_images/off1.png  used on input line 523.
-(pdftex.def)             Requested size: 469.7571pt x 399.26534pt.
+Package pdftex.def Info: table_images/off1.png  used on input line 524.
+(pdftex.def)             Requested size: 469.75679pt x 398.74704pt.
 
 
-[11 <./table_images/off1.png>]
-<table_images/def1.png, id=144, 1668.2325pt x 1555.8125pt>
+[12 <./table_images/off1.png>]
+<table_images/def1.png, id=148, 1724.4425pt x 1587.9325pt>
 File: table_images/def1.png Graphic file (type png)
 <use table_images/def1.png>
-Package pdftex.def Info: table_images/def1.png  used on input line 532.
-(pdftex.def)             Requested size: 469.74925pt x 438.09348pt.
+Package pdftex.def Info: table_images/def1.png  used on input line 533.
+(pdftex.def)             Requested size: 469.73682pt x 432.55159pt.
 
 
-[12 <./table_images/def1.png>]
-<table_images/off2.png, id=151, 1668.2325pt x 491.8375pt>
+[13 <./table_images/def1.png>]
+<table_images/off2.png, id=157, 1720.4275pt x 503.8825pt>
 File: table_images/off2.png Graphic file (type png)
 <use table_images/off2.png>
-Package pdftex.def Info: table_images/off2.png  used on input line 541.
-(pdftex.def)             Requested size: 469.74925pt x 138.49405pt.
-<table_images/def2.png, id=152, 1664.2175pt x 459.7175pt>
+Package pdftex.def Info: table_images/off2.png  used on input line 542.
+(pdftex.def)             Requested size: 469.7457pt x 137.58012pt.
+<table_images/def2.png, id=158, 1726.45pt x 483.8075pt>
 File: table_images/def2.png Graphic file (type png)
 <use table_images/def2.png>
-Package pdftex.def Info: table_images/def2.png  used on input line 548.
-(pdftex.def)             Requested size: 469.76141pt x 129.76521pt.
+Package pdftex.def Info: table_images/def2.png  used on input line 549.
+(pdftex.def)             Requested size: 469.75679pt x 131.64114pt.
 
 
-[13 <./table_images/off2.png> <./table_images/def2.png>]
-<table_images/off3.png, id=163, 1718.42pt x 475.7775pt>
+[14 <./table_images/off2.png> <./table_images/def2.png>]
+<table_images/off3.png, id=167, 1720.4275pt x 479.7925pt>
 File: table_images/off3.png Graphic file (type png)
 <use table_images/off3.png>
-Package pdftex.def Info: table_images/off3.png  used on input line 557.
-(pdftex.def)             Requested size: 469.74821pt x 130.05878pt.
-<table_images/def3.png, id=164, 1716.4125pt x 475.7775pt>
+Package pdftex.def Info: table_images/off3.png  used on input line 558.
+(pdftex.def)             Requested size: 469.7457pt x 131.00258pt.
+<table_images/def3.png, id=168, 1722.435pt x 477.785pt>
 File: table_images/def3.png Graphic file (type png)
 <use table_images/def3.png>
-Package pdftex.def Info: table_images/def3.png  used on input line 564.
-(pdftex.def)             Requested size: 469.74944pt x 130.21124pt.
+Package pdftex.def Info: table_images/def3.png  used on input line 565.
+(pdftex.def)             Requested size: 469.7419pt x 130.30136pt.
 
 
-[14 <./table_images/off3.png> <./table_images/def3.png>]
+[15 <./table_images/off3.png> <./table_images/def3.png>]
 
-[15]
+[16]
 
-LaTeX Warning: Hyper reference `table-of-contents' on page 16 undefined on input line 626.
+LaTeX Warning: Hyper reference `table-of-contents' on page 17 undefined on input line 627.
 
 
 
-[16] (./Writing.aux)
+[17] (./Writing.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
@@ -531,18 +533,18 @@ LaTeX Warning: There were undefined references.
 
  ) 
 Here is how much of TeX's memory you used:
- 11337 strings out of 475171
- 174911 string characters out of 5765517
- 579777 words of memory out of 5000000
+ 11338 strings out of 475171
+ 174918 string characters out of 5765517
+ 579778 words of memory out of 5000000
  34095 multiletter control sequences out of 15000+600000
  626275 words of font info for 88 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 89i,10n,93p,652b,450s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 89i,9n,93p,652b,450s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </Users/user/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></Users/user/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></Users/user/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmex10.pfb></Users/user/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi10.pfb></Users/user/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi7.pfb></Users/user/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmib10.pfb></Users/user/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb></Users/user/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr12.pfb></Users/user/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr17.pfb></Users/user/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr7.pfb></Users/user/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmri10.pfb></Users/user/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy10.pfb>
-Output written on Writing.pdf (16 pages, 2215679 bytes).
+Output written on Writing.pdf (17 pages, 3705519 bytes).
 PDF statistics:
- 365 PDF objects out of 1000 (max. 8388607)
- 293 compressed objects within 3 object streams
- 59 named destinations out of 1000 (max. 500000)
+ 369 PDF objects out of 1000 (max. 8388607)
+ 296 compressed objects within 3 object streams
+ 60 named destinations out of 1000 (max. 500000)
  277 words of extra memory for PDF output out of 10000 (max. 10000000)
 

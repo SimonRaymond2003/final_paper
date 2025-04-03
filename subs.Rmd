@@ -1,0 +1,535 @@
+---
+title: "subs"
+output: pdf_document
+date: "2025-04-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load in nflverse data
+
+We will take the 2024 data
+
+```{r}
+library(nflreadr)
+library(dplyr)
+
+# Load the datasets
+pbp <- load_pbp(seasons = 2023)
+participation <- load_participation(seasons = 2023)
+
+# Merge with correct column mapping
+merged_data <- pbp %>%
+  left_join(
+    participation,
+    by = c("game_id" = "nflverse_game_id", "play_id" = "play_id")
+  )
+```
+
+
+in merged_data grab play_id, game_id, home_team, away_team, season_type, week, offense_players and defense_players
+
+
+```{r}
+merged_data <- merged_data %>%
+  select(play_id, game_id, desc, home_team, away_team, posteam, down, play_type, season_type, week, offense_players, defense_players)
+
+# use home and away to create def team... then kill home and away columns
+merged_data$def_team <- ifelse(merged_data$posteam == merged_data$home_team, merged_data$away_team, merged_data$home_team)
+merged_data <- merged_data %>%
+  select(-home_team, -away_team)
+
+# keep only if play type is run or pass and kill any rows that have NA for down
+merged_data <- merged_data %>%
+  filter(play_type %in% c("run", "pass")) %>%
+  filter(!is.na(down))
+```
+
+```{r}
+str(merged_data)
+```
+
+```{r}
+library(tidyr)
+library(dplyr)
+
+# Split offense players (up to 11 positions)
+merged_data <- merged_data %>%
+  separate(
+    offense_players,
+    into = paste0("off_player_", 1:11),
+    sep = ";",
+    remove = FALSE,  # Keep original column
+    fill = "right",  # Fill with NA if fewer than 11
+    convert = TRUE   # Convert to appropriate data type
+  ) %>%
+  # Split defense players (up to 11 positions)
+  separate(
+    defense_players,
+    into = paste0("def_player_", 1:11),
+    sep = ";",
+    remove = FALSE,
+    fill = "right",
+    convert = TRUE
+  )
+# kill the od cols now
+merged_data <- merged_data %>%
+  select(-offense_players, -defense_players)
+
+# Verify the new structure
+glimpse(merged_data)
+
+```
+
+Now we need to go in each game drive by drive... basicallly just count between plays on the same drives how many players on offense/defense swapped out
+
+To identify a game its the game id.. that is easy
+
+for the drives it can be sequential!
+
+
+ so go for each game... then take first value as down 1 then 2 then back down to 1 mabye or whatever but a change in drive is when the posteam switches... when it switches you start recounting.... the output need to be by game then by drive and just make a drive index... then count the number of players that change between plays... so you are looking for each player on offense how many swapped and how many swapped on defense... it does not need to be slot specific just them being on the field is fine.
+
+```{r}
+# Create a function to identify drives by team possession changes
+identify_drives <- function(data) {
+  # Sort by game_id and play_id to ensure chronological ordering
+  data <- data %>%
+    arrange(game_id, play_id)
+  
+  # Initialize drive variables
+  data$drive_number <- 0
+  current_drive <- 1
+  current_game <- ""
+  current_posteam <- ""
+  
+  # Identify drives by detecting changes in possession team
+  for (i in 1:nrow(data)) {
+    if (data$game_id[i] != current_game) {
+      # New game
+      current_game <- data$game_id[i]
+      current_posteam <- data$posteam[i]
+      current_drive <- 1
+    } else if (data$posteam[i] != current_posteam) {
+      # New drive (possession team changed)
+      current_posteam <- data$posteam[i]
+      current_drive <- current_drive + 1
+    }
+    
+    # Assign drive number
+    data$drive_number[i] <- current_drive
+  }
+  
+  return(data)
+}
+
+# Function to count player substitutions between consecutive plays
+# Function to count player substitutions correctly
+count_substitutions <- function(data) {
+  # Create a unique identifier for each drive
+  data$drive_id <- paste(data$game_id, data$drive_number, sep = "_")
+  
+  # Initialize results dataframe
+  substitution_data <- data.frame()
+  
+  # Process each drive
+  for (current_drive_id in unique(data$drive_id)) {
+    # Get plays for this drive, ordered by play_id
+    drive_plays <- data %>%
+      filter(drive_id == current_drive_id) %>%
+      arrange(play_id)
+    
+    # Skip if only one play in the drive
+    if (nrow(drive_plays) <= 1) {
+      next
+    }
+    
+    # Compare consecutive plays
+    for (i in 1:(nrow(drive_plays) - 1)) {
+      current_play <- drive_plays[i, ]
+      next_play <- drive_plays[i + 1, ]
+      
+      # Extract offensive players for current and next play
+      current_off_players <- unlist(current_play[grep("off_player_", names(current_play))])
+      current_off_players <- current_off_players[!is.na(current_off_players)]
+      
+      next_off_players <- unlist(next_play[grep("off_player_", names(next_play))])
+      next_off_players <- next_off_players[!is.na(next_off_players)]
+      
+      # Extract defensive players for current and next play
+      current_def_players <- unlist(current_play[grep("def_player_", names(current_play))])
+      current_def_players <- current_def_players[!is.na(current_def_players)]
+      
+      next_def_players <- unlist(next_play[grep("def_player_", names(next_play))])
+      next_def_players <- next_def_players[!is.na(next_def_players)]
+      
+      # CORRECT COUNT: How many players changed (not double counting)
+      # For offense: Count players who left (or entered, should be same number)
+      off_left <- setdiff(current_off_players, next_off_players)
+      off_subs <- length(off_left)
+      
+      # For defense: Count players who left
+      def_left <- setdiff(current_def_players, next_def_players) 
+      def_subs <- length(def_left)
+      
+      # Create row for this play transition
+      result_row <- data.frame(
+        game_id = current_play$game_id,
+        week = current_play$week,
+        season_type = current_play$season_type,
+        drive_id = current_drive_id,
+        drive_number = current_play$drive_number,
+        play_id = current_play$play_id,
+        next_play_id = next_play$play_id,
+        posteam = current_play$posteam,
+        def_team = current_play$def_team,
+        play_type = current_play$play_type,
+        down = current_play$down,
+        off_subs = off_subs,
+        def_subs = def_subs,
+        stringsAsFactors = FALSE
+      )
+      
+      # Add to results
+      substitution_data <- rbind(substitution_data, result_row)
+    }
+  }
+  
+  return(substitution_data)
+}
+
+# Create simple summary matrices for plotting
+create_summary_matrices <- function(substitution_data) {
+  # 1. Team level summary (offensive substitutions)
+  team_off_summary <- substitution_data %>%
+    group_by(posteam) %>%
+    summarize(
+      total_plays = n(),
+      total_off_subs = sum(off_subs),
+      avg_off_subs_per_play = mean(off_subs),
+      .groups = 'drop'
+    ) %>%
+    arrange(desc(avg_off_subs_per_play))
+  
+  # 2. Team level summary (defensive substitutions)
+  team_def_summary <- substitution_data %>%
+    group_by(def_team) %>%
+    summarize(
+      total_plays = n(),
+      total_def_subs = sum(def_subs),
+      avg_def_subs_per_play = mean(def_subs),
+      .groups = 'drop'
+    ) %>%
+    arrange(desc(avg_def_subs_per_play))
+  
+  # 3. Down level summary
+  down_summary <- substitution_data %>%
+    group_by(down) %>%
+    summarize(
+      total_plays = n(),
+      avg_off_subs = mean(off_subs),
+      avg_def_subs = mean(def_subs),
+      .groups = 'drop'
+    )
+  
+  # 4. Play type summary
+  play_type_summary <- substitution_data %>%
+    group_by(play_type) %>%
+    summarize(
+      total_plays = n(),
+      avg_off_subs = mean(off_subs),
+      avg_def_subs = mean(def_subs),
+      .groups = 'drop'
+    )
+  
+  # 5. Game level summary
+  game_summary <- substitution_data %>%
+    group_by(game_id) %>%
+    summarize(
+      total_plays = n(),
+      total_off_subs = sum(off_subs),
+      total_def_subs = sum(def_subs),
+      avg_off_subs = mean(off_subs),
+      avg_def_subs = mean(def_subs),
+      .groups = 'drop'
+    )
+  
+  # 6. Week level summary
+  week_summary <- substitution_data %>%
+    group_by(week) %>%
+    summarize(
+      total_plays = n(),
+      avg_off_subs = mean(off_subs),
+      avg_def_subs = mean(def_subs),
+      .groups = 'drop'
+    )
+  
+  # Return all summaries in a list
+  return(list(
+    team_offense = team_off_summary,
+    team_defense = team_def_summary,
+    by_down = down_summary,
+    by_play_type = play_type_summary,
+    by_game = game_summary,
+    by_week = week_summary,
+    raw_data = substitution_data
+  ))
+}
+
+# Apply the functions to the data
+# Step 1: Identify drives
+message("Identifying drives...")
+merged_data_with_drives <- identify_drives(merged_data)
+
+# Step 2: Count substitutions between consecutive plays
+message("Counting substitutions between plays...")
+substitution_counts <- count_substitutions(merged_data_with_drives)
+
+# Step 3: Create summary matrices for plotting
+message("Creating summary matrices...")
+substitution_summaries <- create_summary_matrices(substitution_counts)
+
+```
+
+```{r}
+# Load required libraries
+library(ggplot2)
+library(dplyr)
+
+# Assuming substitution_counts is already loaded
+# If running this as a separate script, load the data:
+# substitution_counts <- read.csv("substitution_raw_data.csv")
+
+# Create count tables for each value
+off_counts <- table(substitution_counts$off_subs)
+def_counts <- table(substitution_counts$def_subs)
+
+# Convert to data frames for plotting
+off_df <- data.frame(
+  subs = as.numeric(names(off_counts)),
+  count = as.numeric(off_counts)
+)
+
+def_df <- data.frame(
+  subs = as.numeric(names(def_counts)),
+  count = as.numeric(def_counts)
+)
+
+# Only keep values 0-10 for cleaner visualization
+off_df <- off_df[off_df$subs <= 10, ]
+def_df <- def_df[def_df$subs <= 10, ]
+
+# 1. Offensive substitution histogram with counts
+off_hist <- ggplot(off_df, aes(x = factor(subs), y = count)) +
+  geom_bar(stat = "identity", fill = "steelblue", color = "black", alpha = 0.7) +
+  geom_text(aes(label = count), vjust = -0.5, size = 3) +
+  labs(
+    title = "Frequency of Offensive Substitutions per Play",
+    x = "Number of Offensive Substitutions",
+    y = "Frequency"
+  ) +
+  theme_minimal() +
+  scale_x_discrete(limits = as.character(0:10))
+
+# 2. Defensive substitution histogram with counts
+def_hist <- ggplot(def_df, aes(x = factor(subs), y = count)) +
+  geom_bar(stat = "identity", fill = "firebrick", color = "black", alpha = 0.7) +
+  geom_text(aes(label = count), vjust = -0.5, size = 3) +
+  labs(
+    title = "Frequency of Defensive Substitutions per Play",
+    x = "Number of Defensive Substitutions",
+    y = "Frequency"
+  ) +
+  theme_minimal() +
+  scale_x_discrete(limits = as.character(0:10))
+
+# 3. Combined substitution counts by down
+# First, prepare data
+down_subs <- substitution_counts %>%
+  filter(off_subs <= 10, def_subs <= 10) %>% # Keep reasonable values
+  group_by(down, off_subs) %>%
+  summarize(count = n(), .groups = 'drop')
+
+# Create stacked bar chart for offensive subs by down
+down_off_hist <- ggplot(down_subs, aes(x = factor(off_subs), y = count, fill = factor(down))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = count), position = position_dodge(width = 0.9), vjust = -0.5, size = 2.5) +
+  labs(
+    title = "Offensive Substitutions by Down",
+    x = "Number of Substitutions",
+    y = "Frequency",
+    fill = "Down"
+  ) +
+  theme_minimal() +
+  scale_x_discrete(limits = as.character(0:10))
+
+# 4. Substitutions by play type
+play_type_subs <- substitution_counts %>%
+  filter(off_subs <= 10) %>% # Keep reasonable values
+  group_by(play_type, off_subs) %>%
+  summarize(count = n(), .groups = 'drop')
+
+play_type_hist <- ggplot(play_type_subs, aes(x = factor(off_subs), y = count, fill = play_type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = count), position = position_dodge(width = 0.9), vjust = -0.5, size = 3) +
+  labs(
+    title = "Offensive Substitutions by Play Type",
+    x = "Number of Substitutions",
+    y = "Frequency",
+    fill = "Play Type"
+  ) +
+  theme_minimal() +
+  scale_x_discrete(limits = as.character(0:10))
+
+# Display plots
+print(off_hist)
+print(def_hist)
+print(down_off_hist)
+print(play_type_hist)
+
+# Create a simple summary stats table
+summary_stats <- data.frame(
+  Statistic = c(
+    "Mean Offensive Substitutions",
+    "Median Offensive Substitutions",
+    "Most Common Offensive Substitution",
+    "Mean Defensive Substitutions",
+    "Median Defensive Substitutions",
+    "Most Common Defensive Substitution"
+  ),
+  Value = c(
+    round(mean(substitution_counts$off_subs), 2),
+    median(substitution_counts$off_subs),
+    as.numeric(names(off_counts)[which.max(off_counts)]),
+    round(mean(substitution_counts$def_subs), 2),
+    median(substitution_counts$def_subs),
+    as.numeric(names(def_counts)[which.max(def_counts)])
+  )
+)
+
+print(summary_stats)
+```
+
+
+```{r}
+# Calculate average substitutions by down for both offense and defense
+avg_subs_by_down <- substitution_counts %>%
+  group_by(down) %>%
+  summarize(
+    avg_off_subs = mean(off_subs, na.rm = TRUE),
+    avg_def_subs = mean(def_subs, na.rm = TRUE),
+    count = n(),
+    .groups = 'drop'
+  )
+
+# Print the table
+print(avg_subs_by_down)
+
+# Convert to long format for easier plotting
+avg_subs_long <- avg_subs_by_down %>%
+  pivot_longer(
+    cols = c(avg_off_subs, avg_def_subs),
+    names_to = "team_type",
+    values_to = "avg_subs"
+  ) %>%
+  mutate(
+    team_type = ifelse(team_type == "avg_off_subs", "Offense", "Defense")
+  )
+
+# Create bar plot
+ggplot(avg_subs_long, aes(x = factor(down), y = avg_subs, fill = team_type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = sprintf("%.2f", avg_subs)), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.3, 
+            size = 3.5) +
+  labs(
+    title = "Average Substitutions by Down",
+    subtitle = paste("Based on", sum(avg_subs_by_down$count), "plays"),
+    x = "Down",
+    y = "Average Number of Substitutions",
+    fill = "Team Type"
+  ) +
+  scale_fill_manual(values = c("Offense" = "steelblue", "Defense" = "firebrick")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5),
+    legend.position = "bottom",
+    axis.title = element_text(face = "bold")
+  )
+
+# Create a version with error bars (standard error)
+avg_subs_with_se <- substitution_counts %>%
+  group_by(down) %>%
+  summarize(
+    avg_off_subs = mean(off_subs, na.rm = TRUE),
+    se_off_subs = sd(off_subs, na.rm = TRUE) / sqrt(n()),
+    avg_def_subs = mean(def_subs, na.rm = TRUE),
+    se_def_subs = sd(def_subs, na.rm = TRUE) / sqrt(n()),
+    count = n(),
+    .groups = 'drop'
+  )
+
+# Convert to long format for error bar plotting
+avg_subs_se_long <- avg_subs_with_se %>%
+  pivot_longer(
+    cols = c(avg_off_subs, avg_def_subs),
+    names_to = "team_type",
+    values_to = "avg_subs"
+  ) %>%
+  mutate(
+    se = ifelse(team_type == "avg_off_subs", se_off_subs, se_def_subs),
+    team_type = ifelse(team_type == "avg_off_subs", "Offense", "Defense")
+  )
+
+# Create bar plot with error bars
+ggplot(avg_subs_se_long, aes(x = factor(down), y = avg_subs, fill = team_type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_errorbar(
+    aes(ymin = avg_subs - se, ymax = avg_subs + se),
+    position = position_dodge(width = 0.9),
+    width = 0.25
+  ) +
+  geom_text(aes(label = sprintf("%.2f", avg_subs)), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, 
+            size = 3.5) +
+  labs(
+    title = "Average Substitutions by Down (with Standard Error)",
+    subtitle = paste("Based on", sum(avg_subs_with_se$count), "plays"),
+    x = "Down",
+    y = "Average Number of Substitutions",
+    fill = "Team Type"
+  ) +
+  scale_fill_manual(values = c("Offense" = "steelblue", "Defense" = "firebrick")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5),
+    legend.position = "bottom",
+    axis.title = element_text(face = "bold")
+  )
+
+# Table with percentages compared to average
+overall_avg <- substitution_counts %>%
+  summarize(
+    avg_off_subs = mean(off_subs, na.rm = TRUE),
+    avg_def_subs = mean(def_subs, na.rm = TRUE)
+  )
+
+comparison_table <- avg_subs_by_down %>%
+  mutate(
+    off_pct_diff = (avg_off_subs / overall_avg$avg_off_subs - 1) * 100,
+    def_pct_diff = (avg_def_subs / overall_avg$avg_def_subs - 1) * 100
+  ) %>%
+  select(down, avg_off_subs, off_pct_diff, avg_def_subs, def_pct_diff, count)
+
+# Print comparison table
+print(comparison_table)
+```
+
+
+

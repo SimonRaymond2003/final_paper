@@ -148,7 +148,6 @@ transform_column_names <- function(df) {
 off_grades_outcome <- fread("unstandardized_processed_predict_ccafd_off_grades.csv.csv.gz")
 # Apply transformation to column names
 off_grades_outcome <- transform_column_names(off_grades_outcome)
-
 # 2. Load offensive grades select data
 off_grades_select <- fread("unstandardized_processed_predict_ccfd_off_grades.csv.csv.gz")
 # Apply transformation to column names

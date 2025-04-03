@@ -20,7 +20,7 @@ f_z <- dnorm(z) / (1 - z)
 
 # Create the plot
 plot(z, f_z, type = "l", col = "blue", lwd = 2,
-     main = "Plot of f(z) = z/(1-z) for z from 0 to 1",
+     main = "Plot of f(z) = pdf(z)/(1-z) for z from 0 to 1",
      xlab = "z", ylab = "f(z)",
      xlim = c(0, 1), ylim = c(0, 20))
 
@@ -479,5 +479,9 @@ modern_exogeneity_field_viz <- create_modern_football_exogeneity_viz()
 # Display the plot
 print(modern_exogeneity_field_viz)
 
+```
+
+```{r}
+# make a plot for this offense_probs_dist.png and offense_gimr_dist.png
 ```
 

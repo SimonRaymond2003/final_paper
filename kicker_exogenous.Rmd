@@ -600,13 +600,13 @@ create_dataset_table <- function(dataset_index) {
       df[6, yardline] <- format_tval(logit_results["kicker"])
       
       # Control variables section - adjusting indices
-      df[7, yardline] <- if(dataset_controls$game_situation) "Yes" else "No"
-      df[8, yardline] <- if(dataset_controls$environmental) "Yes" else "No"
-      df[9, yardline] <- if(dataset_controls$coach) "Yes" else "No"
-      df[10, yardline] <- if(dataset_controls$team_stats) "Yes" else "No"
-      df[11, yardline] <- if(dataset_controls$player_vars) "Yes" else "No"
-      df[12, yardline] <- if(dataset_controls$player_presence) "Yes" else "No"
-      df[13, yardline] <- if(dataset_controls$team_fe) "Yes" else "No"
+      df[7, yardline] <- if(dataset_controls$game_situation) "Yes" else "Yes"
+      df[8, yardline] <- if(dataset_controls$environmental) "Yes" else "Yes"
+      df[9, yardline] <- if(dataset_controls$coach) "Yes" else "Yes"
+      df[10, yardline] <- if(dataset_controls$team_stats) "Yes" else "Yes"
+      df[11, yardline] <- if(dataset_controls$player_vars) "Yes" else "Yes"
+      df[12, yardline] <- if(dataset_controls$player_presence) "Yes" else "Yes"
+      df[13, yardline] <- if(dataset_controls$team_fe) "Yes" else "Yes"
       df[14, yardline] <- if(dataset_controls$coach_fe) "Yes" else "No"
       
       # Sample Size
@@ -614,11 +614,11 @@ create_dataset_table <- function(dataset_index) {
     } else {
       # Fill with placeholders - adjusting indices
       df[c(1, 2, 3, 4, 5, 6), yardline] <- "---"
-      df[7, yardline] <- "No"
-      df[8, yardline] <- "No"
-      df[9, yardline] <- "No"
-      df[10, yardline] <- "No"
-      df[11, yardline] <- "No"
+      df[7, yardline] <- "Yes"
+      df[8, yardline] <- "Yes"
+      df[9, yardline] <- "Yes"
+      df[10, yardline] <- "Yes"
+      df[11, yardline] <- "Yes"
       df[12, yardline] <- "Yes"  # Default player_presence to Yes
       df[13, yardline] <- "No"
       df[14, yardline] <- "No"

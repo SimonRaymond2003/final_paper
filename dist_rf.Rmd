@@ -484,7 +484,7 @@ hist(plot_data$z,
      xlab = "z (Selection Probability)", 
      col = "lightblue",
      border = "darkblue",
-     breaks = 30)
+     breaks = 60)
 
 # Add a line for the mean
 abline(v = mean(plot_data$z, na.rm = TRUE), col = "red", lty = 2)
@@ -525,7 +525,7 @@ hist(plot_data$gimr,
      xlab = "GIMR", 
      col = "lightgreen",
      border = "darkgreen",
-     breaks = 30)
+     breaks = 60)
 
 # Add a line for the mean
 abline(v = mean(plot_data$gimr, na.rm = TRUE), col = "red", lty = 2)

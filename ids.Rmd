@@ -1,0 +1,782 @@
+---
+title: "ids"
+output: pdf_document
+date: "2025-04-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(data.table)
+cfd <- fread("cafd_with_pff_ids.csv")
+# if a value is blank set it to na
+cfd[cfd == ""] <- NA
+```
+
+```{r}
+library(dplyr)
+# Select the specified columns and all player columns explicitly
+cfd <- cfd %>% 
+  select(
+    # The base columns
+    week, season, play_id, game_id, game_date, down, play_type, 
+    
+    # Explicitly select each player column
+    offense_player_1, offense_player_4,
+    offense_player_8, offense_player_9, offense_player_10, offense_player_14, 
+    offense_player_17, offense_player_18, offense_player_19, offense_player_20, 
+    offense_player_21,
+    
+    defense_player_1, defense_player_2, defense_player_3, defense_player_4,
+    defense_player_9, defense_player_10, defense_player_11, 
+    defense_player_13, defense_player_14, defense_player_15, defense_player_16,
+    defense_player_17, defense_player_20,
+    defense_player_21, defense_player_22,
+    
+    starter_offense_player_1, starter_offense_player_4,
+    starter_offense_player_8, starter_offense_player_9, starter_offense_player_10, 
+    starter_offense_player_14, starter_offense_player_17, starter_offense_player_18, 
+    starter_offense_player_19, starter_offense_player_20, starter_offense_player_21,
+    
+    starter_defense_player_1, starter_defense_player_2, starter_defense_player_3,
+    starter_defense_player_4, starter_defense_player_9, starter_defense_player_10, 
+    starter_defense_player_11, starter_defense_player_13, starter_defense_player_14, 
+    starter_defense_player_15, starter_defense_player_16, starter_defense_player_17, 
+    starter_defense_player_20, starter_defense_player_21, starter_defense_player_22
+  )
+
+# keep only if play_type is run or pass
+cfd <- cfd %>% 
+  filter(play_type %in% c("run", "pass"))
+```
+
+```{r}
+find_starter_matches <- function(data, starter_col_name) {
+  # Validate input
+  if (!starter_col_name %in% names(data)) {
+    stop(paste("Column", starter_col_name, "not found in data"))
+  }
+  
+  # Determine if we're working with offense or defense
+  if (grepl("^starter_offense", starter_col_name)) {
+    non_starter_cols <- grep("^offense_player_[0-9]+$", names(data), value = TRUE)
+    col_type <- "offense"
+  } else if (grepl("^starter_defense", starter_col_name)) {
+    non_starter_cols <- grep("^defense_player_[0-9]+$", names(data), value = TRUE)
+    col_type <- "defense"
+  } else {
+    stop("Column name must start with 'starter_offense' or 'starter_defense'")
+  }
+  
+  # Print diagnostic information 
+  cat("Analyzing:", starter_col_name, "\n")
+  cat("Type detected:", col_type, "\n")
+  cat("Found", length(non_starter_cols), "matching non-starter columns\n")
+  
+  # Initialize a results data frame to store match counts
+  results <- data.frame(non_starter_col = non_starter_cols, 
+                        match_count = 0)
+  
+  # Get the values from the starter column
+  starter_values <- data[[starter_col_name]]
+  
+  # Go through each non-starter column
+  for (i in seq_along(non_starter_cols)) {
+    col <- non_starter_cols[i]
+    # Count matches where non-NA values in starter column match non-NA values in current column
+    matches <- sum(starter_values == data[[col]] & !is.na(starter_values) & !is.na(data[[col]]), na.rm = TRUE)
+    results[i, "match_count"] <- matches
+  }
+  
+  # Add percentage of matches 
+  total_rows <- sum(!is.na(starter_values))
+  results$match_percentage <- round((results$match_count / total_rows) * 100, 2)
+  
+  # Sort by match count in descending order
+  results <- results[order(-results$match_count), ]
+  
+  # Add summary information
+  attr(results, "starter_column") <- starter_col_name
+  attr(results, "total_rows_with_data") <- total_rows
+  attr(results, "column_type") <- col_type
+  
+  # Return the number of matches found in each column
+  return(results)
+}
+
+
+# Find matches for starter_offense_player_1 in all offense_player columns
+result <- find_starter_matches(cfd, "starter_offense_player_1")
+ print(result)
+#
+# Find matches for starter_defense_player_1 in all defense_player columns
+ result <- find_starter_matches(cfd, "starter_defense_player_1") 
+print(result)
+```
+
+```{r}
+# Simplified analysis of all starter positions - only showing total matches plot
+
+# Function to analyze all starter positions and create visualization
+analyze_starter_positions <- function(data) {
+  library(ggplot2)
+  library(dplyr)
+  library(knitr)
+  
+  # Get all starter offense column names
+  starter_offense_cols <- grep("^starter_offense_player_", names(data), value = TRUE)
+  
+  # Get all starter defense column names
+  starter_defense_cols <- grep("^starter_defense_player_", names(data), value = TRUE)
+  
+  # Create an empty list to store results summary
+  offense_summary <- data.frame()
+  defense_summary <- data.frame()
+  
+  # Process all offense starter positions
+  cat("Analyzing offense starter positions...\n")
+  for (col in starter_offense_cols) {
+    cat("Processing", col, "...\n")
+    result <- find_starter_matches(data, col)
+    
+    # Add summary row for this starter position
+    summary_row <- data.frame(
+      starter_position = col,
+      total_matches = sum(result$match_count),
+      data_rows = attr(result, "total_rows_with_data")
+    )
+    
+    offense_summary <- rbind(offense_summary, summary_row)
+  }
+  
+  # Process all defense starter positions
+  cat("Analyzing defense starter positions...\n")
+  for (col in starter_defense_cols) {
+    cat("Processing", col, "...\n")
+    result <- find_starter_matches(data, col)
+    
+    # Add summary row for this starter position
+    summary_row <- data.frame(
+      starter_position = col,
+      total_matches = sum(result$match_count),
+      data_rows = attr(result, "total_rows_with_data")
+    )
+    
+    defense_summary <- rbind(defense_summary, summary_row)
+  }
+  
+  # Clean up position names for display
+  offense_summary$starter_position <- gsub("starter_", "", offense_summary$starter_position)
+  defense_summary$starter_position <- gsub("starter_", "", defense_summary$starter_position)
+  
+  # Create a bar plot showing overall match counts
+  plot_overall_counts <- function() {
+    # Combine offense and defense data
+    offense_summary$type <- "Offense"
+    defense_summary$type <- "Defense"
+    combined <- rbind(offense_summary, defense_summary)
+    
+    # Sort by total matches
+    combined <- combined %>% 
+      arrange(desc(total_matches))
+    
+    # Create the plot
+    ggplot(combined, aes(x = reorder(starter_position, total_matches), 
+                          y = total_matches, 
+                          fill = type)) +
+      geom_bar(stat = "identity") +
+      coord_flip() +
+      labs(title = "Total Matches by Starter Position",
+           x = "Starter Position",
+           y = "Total Match Count",
+           fill = "Type") +
+      theme_minimal() +
+      theme(
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        legend.position = "top"
+      ) +
+      scale_fill_manual(values = c("Offense" = "blue", "Defense" = "red"))
+  }
+  
+  # Display summary tables
+  offense_table <- offense_summary %>%
+    select(starter_position, total_matches) %>%
+    arrange(desc(total_matches))
+  
+  defense_table <- defense_summary %>%
+    select(starter_position, total_matches) %>%
+    arrange(desc(total_matches))
+  
+  # Return results and plot function
+  return(list(
+    offense_table = offense_table,
+    defense_table = defense_table,
+    plot_overall_counts = plot_overall_counts,
+    combined_data = rbind(
+      mutate(offense_summary, type = "Offense"),
+      mutate(defense_summary, type = "Defense")
+    )
+  ))
+}
+
+# Run the analysis
+results <- analyze_starter_positions(cfd)
+
+# Display summary tables
+cat("\n\n=== OFFENSE STARTER POSITION SUMMARY ===\n")
+kable(results$offense_table, 
+      caption = "Offense Starter Position Summary (Total Matches)",
+      col.names = c("Starter Position", "Total Matches"))
+
+cat("\n\n=== DEFENSE STARTER POSITION SUMMARY ===\n")
+kable(results$defense_table, 
+      caption = "Defense Starter Position Summary (Total Matches)",
+      col.names = c("Starter Position", "Total Matches"))
+
+# Generate the total matches plot
+results$plot_overall_counts()
+```
+
+```{r}
+# Analysis of starter positions appearing in their matching position vs. other positions
+
+analyze_home_position_matches <- function(data) {
+  library(ggplot2)
+  library(dplyr)
+  library(tidyr)
+  library(knitr)
+  
+  # Get all starter column names
+  starter_cols <- c(
+    grep("^starter_offense_player_", names(data), value = TRUE),
+    grep("^starter_defense_player_", names(data), value = TRUE)
+  )
+  
+  # Create a data frame to store results
+  results <- data.frame(
+    starter_position = character(),
+    home_position = character(),
+    home_matches = integer(),
+    other_matches = integer(),
+    total_matches = integer(),
+    home_percentage = numeric(),
+    stringsAsFactors = FALSE
+  )
+  
+  # Process each starter position
+  for (starter_col in starter_cols) {
+    cat("Processing", starter_col, "...\n")
+    
+    # Determine the matching "home" position
+    # e.g., starter_offense_player_1 -> offense_player_1
+    home_position <- gsub("^starter_", "", starter_col)
+    
+    # Run the position analysis
+    all_positions <- find_starter_matches(data, starter_col)
+    
+    # Find where this position ranks in the matches
+    home_idx <- which(all_positions$non_starter_col == home_position)
+    
+    # If the home position appears in the results
+    if (length(home_idx) > 0) {
+      home_matches <- all_positions$match_count[home_idx]
+      home_rank <- home_idx
+    } else {
+      home_matches <- 0
+      home_rank <- NA
+    }
+    
+    # Calculate total matches across all positions
+    total_matches <- sum(all_positions$match_count)
+    
+    # Calculate matches in positions other than the home position
+    other_matches <- total_matches - home_matches
+    
+    # Calculate percentage of matches in home position
+    home_percentage <- ifelse(total_matches > 0, 
+                              round((home_matches / total_matches) * 100, 2),
+                              0)
+    
+    # Add to results
+    results <- rbind(results, data.frame(
+      starter_position = starter_col,
+      home_position = home_position,
+      home_matches = home_matches,
+      other_matches = other_matches,
+      total_matches = total_matches,
+      home_percentage = home_percentage,
+      home_rank = ifelse(is.na(home_rank), "Not Found", home_rank),
+      type = ifelse(grepl("offense", starter_col), "Offense", "Defense"),
+      stringsAsFactors = FALSE
+    ))
+  }
+  
+  # Clean up the position names for display
+  results$starter_position <- gsub("starter_", "", results$starter_position)
+  
+  # Sort by home percentage in descending order
+  results <- results %>% arrange(desc(home_percentage))
+  
+  # Create a stacked bar plot
+  create_stacked_bar_plot <- function() {
+    # Prepare data for plotting
+    plot_data <- results %>%
+      select(starter_position, home_matches, other_matches, type) %>%
+      gather(key = "match_type", value = "count", home_matches, other_matches) %>%
+      mutate(match_type = ifelse(match_type == "home_matches", "Same Position", "Other Positions"))
+    
+    # Order by total matches and then home matches
+    position_order <- results %>%
+      arrange(type, desc(home_matches)) %>%
+      pull(starter_position)
+    
+    # Convert to factor to maintain order
+    plot_data$starter_position <- factor(plot_data$starter_position, 
+                                         levels = position_order)
+    
+    # Create the plot
+    ggplot(plot_data, aes(x = starter_position, y = count, fill = match_type)) +
+      geom_bar(stat = "identity") +
+      facet_wrap(~ type, scales = "free_y") +
+      coord_flip() +
+      labs(title = "Starter Position Matches by Location",
+           subtitle = "How often starters appear in their designated position vs. other positions",
+           x = "Starter Position",
+           y = "Number of Matches",
+           fill = "Match Type") +
+      theme_minimal() +
+      theme(
+        axis.text.y = element_text(size = 9),
+        legend.position = "top",
+        strip.text = element_text(size = 12, face = "bold"),
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5)
+      ) +
+      scale_fill_manual(values = c("Same Position" = "#4CAF50", "Other Positions" = "#FF9800"))
+  }
+  
+  # Create a percentage bar plot
+  create_percentage_bar_plot <- function() {
+    # Sort by home percentage
+    results_sorted <- results %>%
+      arrange(type, desc(home_percentage))
+    
+    # Order positions
+    position_order <- results_sorted %>%
+      pull(starter_position)
+    
+    # Convert to factor to maintain order
+    results_sorted$starter_position <- factor(results_sorted$starter_position, 
+                                              levels = position_order)
+    
+    # Create the plot
+    ggplot(results_sorted, aes(x = starter_position, y = home_percentage, fill = type)) +
+      geom_bar(stat = "identity") +
+      facet_wrap(~ type, scales = "free_y") +
+      coord_flip() +
+      labs(title = "Percentage of Starter Matches in Designated Position",
+           subtitle = "How often starters appear in their designated position",
+           x = "Starter Position",
+           y = "Percentage in Designated Position (%)") +
+      theme_minimal() +
+      theme(
+        axis.text.y = element_text(size = 9),
+        legend.position = "none",
+        strip.text = element_text(size = 12, face = "bold"),
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5)
+      ) +
+      scale_fill_manual(values = c("Offense" = "blue", "Defense" = "red"))
+  }
+  
+  # Return results and plot functions
+  return(list(
+    results = results,
+    create_stacked_bar_plot = create_stacked_bar_plot,
+    create_percentage_bar_plot = create_percentage_bar_plot
+  ))
+}
+
+# Run the analysis
+home_position_results <- analyze_home_position_matches(cfd)
+
+# Display the main results table
+cat("\n=== STARTER POSITION MATCH ANALYSIS ===\n")
+kable(home_position_results$results %>% 
+        select(starter_position, type, home_matches, other_matches, 
+               total_matches, home_percentage, home_rank),
+      col.names = c("Starter Position", "Type", "Matches in Designated Position", 
+                    "Matches in Other Positions", "Total Matches", 
+                    "% in Designated Position", "Designated Position Rank"))
+
+# Generate plots
+home_position_results$create_stacked_bar_plot()
+home_position_results$create_percentage_bar_plot()
+```
+
+```{r}
+# Simple NA percentage analysis with four tables and sidebar charts
+
+analyze_na_percentages_tables <- function(data) {
+  library(ggplot2)
+  library(dplyr)
+  library(knitr)
+  library(gridExtra)
+  
+  # Get all column names by type
+  offense_cols <- grep("^offense_player_[0-9]+$", names(data), value = TRUE)
+  defense_cols <- grep("^defense_player_[0-9]+$", names(data), value = TRUE)
+  starter_offense_cols <- grep("^starter_offense_player_[0-9]+$", names(data), value = TRUE)
+  starter_defense_cols <- grep("^starter_defense_player_[0-9]+$", names(data), value = TRUE)
+  
+  # Function to calculate NA percentage for columns
+  calculate_na_percent <- function(df, columns) {
+    result <- data.frame(
+      column = columns,
+      na_count = sapply(columns, function(col) sum(is.na(df[[col]]))),
+      stringsAsFactors = FALSE
+    )
+    
+    result$total_rows <- nrow(df)
+    result$na_percentage <- round((result$na_count / result$total_rows) * 100, 2)
+    result$position_number <- as.integer(gsub(".*player_([0-9]+)$", "\\1", result$column))
+    
+    # Sort by position number
+    result <- result[order(result$position_number), ]
+    return(result)
+  }
+  
+  # Calculate NA percentages for each column category
+  offense_na <- calculate_na_percent(data, offense_cols)
+  defense_na <- calculate_na_percent(data, defense_cols)
+  starter_offense_na <- calculate_na_percent(data, starter_offense_cols)
+  starter_defense_na <- calculate_na_percent(data, starter_defense_cols)
+  
+  # Function to create a sidebar chart for NA percentages
+  create_sidebar_chart <- function(na_data, title, fill_color) {
+    # Create horizontal bar chart
+    p <- ggplot(na_data, aes(x = reorder(column, position_number), y = na_percentage)) +
+      geom_bar(stat = "identity", fill = fill_color) +
+      coord_flip() +
+      labs(title = title,
+           x = NULL,
+           y = "NA Percentage (%)") +
+      theme_minimal() +
+      theme(
+        plot.title = element_text(size = 12, face = "bold"),
+        axis.text.y = element_text(size = 9),
+        panel.grid.major.y = element_blank()
+      )
+    return(p)
+  }
+  
+  # Create the four sidebar charts
+  offense_chart <- create_sidebar_chart(offense_na, "Offense Players NA %", "blue")
+  defense_chart <- create_sidebar_chart(defense_na, "Defense Players NA %", "red")
+  starter_offense_chart <- create_sidebar_chart(starter_offense_na, "Starter Offense Players NA %", "lightblue")
+  starter_defense_chart <- create_sidebar_chart(starter_defense_na, "Starter Defense Players NA %", "pink")
+  
+  # Function to print a formatted table of NA percentages
+  print_na_table <- function(na_data, title) {
+    cat("\n\n===", title, "===\n")
+    table_data <- na_data %>%
+      select(column, na_count, total_rows, na_percentage) %>%
+      arrange(column)
+    
+    kable(table_data, 
+          col.names = c("Column", "NA Count", "Total Rows", "NA Percentage"),
+          align = c("l", "r", "r", "r"))
+  }
+  
+  # Create a list to hold all results
+  results <- list(
+    offense_na = offense_na,
+    defense_na = defense_na,
+    starter_offense_na = starter_offense_na,
+    starter_defense_na = starter_defense_na,
+    offense_chart = offense_chart,
+    defense_chart = defense_chart,
+    starter_offense_chart = starter_offense_chart,
+    starter_defense_chart = starter_defense_chart,
+    print_tables = function() {
+      print_na_table(offense_na, "OFFENSE PLAYERS NA PERCENTAGES")
+      print_na_table(defense_na, "DEFENSE PLAYERS NA PERCENTAGES")
+      print_na_table(starter_offense_na, "STARTER OFFENSE PLAYERS NA PERCENTAGES")
+      print_na_table(starter_defense_na, "STARTER DEFENSE PLAYERS NA PERCENTAGES")
+    },
+    plot_all_charts = function() {
+      grid.arrange(
+        starter_offense_chart, offense_chart,
+        starter_defense_chart, defense_chart,
+        ncol = 2
+      )
+    }
+  )
+  
+  return(results)
+}
+
+# Run the analysis
+na_tables <- analyze_na_percentages_tables(cfd)
+
+# Print all tables
+na_tables$print_tables()
+
+# Display all four charts in a 2x2 grid
+na_tables$plot_all_charts()
+
+```
+
+########## 
+
+```{r}
+library(data.table)
+cfd2<- fread("cafd_with_pff_ids.csv")
+cfd2[cfd2 == ""] <- NA
+
+```
+
+```{r}
+library(dplyr)
+# Select the specified columns and all player columns explicitly
+cfd2<- cfd2 %>% 
+  select(
+    # The base columns
+    week, season, play_id, game_id, game_date, down, play_type, 
+    
+    # Explicitly select each player column
+    offense_1, offense_4,
+    offense_8, offense_9, offense_10, offense_14, 
+    offense_17, offense_18, offense_19, offense_20, 
+    offense_21,
+    
+    defense_1, defense_2, defense_3, defense_4,
+    defense_9, defense_10, defense_11, 
+    defense_13, defense_14, defense_15, defense_16,
+    defense_17, defense_20,
+    defense_21, defense_22,
+    
+    starter_offense_1, starter_offense_4,
+    starter_offense_8, starter_offense_9, starter_offense_10, 
+    starter_offense_14, starter_offense_17, starter_offense_18, 
+    starter_offense_19, starter_offense_20, starter_offense_21,
+    
+    starter_defense_1, starter_defense_2, starter_defense_3,
+    starter_defense_4, starter_defense_9, starter_defense_10, 
+    starter_defense_11, starter_defense_13, starter_defense_14, 
+    starter_defense_15, starter_defense_16, starter_defense_17, 
+    starter_defense_20, starter_defense_21, starter_defense_player_22
+  )
+
+# keep only if play_type is run or pass
+cfd2 <- cfd2 %>% 
+  filter(play_type %in% c("run", "pass"))
+```
+
+```{r}
+# Create a function to compare IDs between the old and new format dataframes
+compare_player_ids <- function(df1, df2) {
+  library(dplyr)
+  library(knitr)
+  library(ggplot2)
+  
+  # Create mapping between old and new column names
+  offense_mapping <- data.frame(
+    old_col = paste0("offense_player_", c(1, 4, 8, 9, 10, 14, 17, 18, 19, 20, 21)),
+    new_col = paste0("offense_", c(1, 4, 8, 9, 10, 14, 17, 18, 19, 20, 21)),
+    type = "Offense",
+    position = c(1, 4, 8, 9, 10, 14, 17, 18, 19, 20, 21)
+  )
+  
+  defense_mapping <- data.frame(
+    old_col = paste0("defense_player_", c(1, 2, 3, 4, 9, 10, 11, 13, 14, 15, 16, 17, 20, 21, 22)),
+    new_col = paste0("defense_", c(1, 2, 3, 4, 9, 10, 11, 13, 14, 15, 16, 17, 20, 21, 22)),
+    type = "Defense",
+    position = c(1, 2, 3, 4, 9, 10, 11, 13, 14, 15, 16, 17, 20, 21, 22)
+  )
+  
+  starter_offense_mapping <- data.frame(
+    old_col = paste0("starter_offense_player_", c(1, 4, 8, 9, 10, 14, 17, 18, 19, 20, 21)),
+    new_col = paste0("starter_offense_", c(1, 4, 8, 9, 10, 14, 17, 18, 19, 20, 21)),
+    type = "Starter Offense",
+    position = c(1, 4, 8, 9, 10, 14, 17, 18, 19, 20, 21)
+  )
+  
+  # Fix the last column name for defense 22 which has an inconsistency
+  starter_defense_mapping <- data.frame(
+    old_col = paste0("starter_defense_player_", c(1, 2, 3, 4, 9, 10, 11, 13, 14, 15, 16, 17, 20, 21, 22)),
+    new_col = c(paste0("starter_defense_", c(1, 2, 3, 4, 9, 10, 11, 13, 14, 15, 16, 17, 20, 21)), "starter_defense_player_22"),
+    type = "Starter Defense",
+    position = c(1, 2, 3, 4, 9, 10, 11, 13, 14, 15, 16, 17, 20, 21, 22)
+  )
+  
+  # Combine all mappings
+  all_mappings <- rbind(
+    offense_mapping,
+    defense_mapping,
+    starter_offense_mapping,
+    starter_defense_mapping
+  )
+  
+  # Initialize results dataframe
+  results <- data.frame(
+    old_col = character(),
+    new_col = character(),
+    type = character(),
+    position = numeric(),
+    not_transferred_count = numeric(),
+    total_ids_original = numeric(),
+    percentage_lost = numeric(),
+    stringsAsFactors = FALSE
+  )
+  
+  # Analyze each pair of columns
+  for (i in 1:nrow(all_mappings)) {
+    old_col <- all_mappings$old_col[i]
+    new_col <- all_mappings$new_col[i]
+    
+    # Check if both columns exist
+    if (!(old_col %in% names(df1) && new_col %in% names(df2))) {
+      cat("Warning: Columns", old_col, "or", new_col, "not found in dataframes\n")
+      next
+    }
+    
+    # Count non-NA values in the original column
+    non_na_original <- sum(!is.na(df1[[old_col]]))
+    
+    # Count cases where original has a value but new is NA
+    # We need to join the datasets by a common key to do this comparison
+    comparison_df <- data.frame(
+      play_id = df1$play_id,
+      game_id = df1$game_id,
+      original_value = df1[[old_col]]
+    )
+    
+    comparison_df2 <- data.frame(
+      play_id = df2$play_id,
+      game_id = df2$game_id,
+      new_value = df2[[new_col]]
+    )
+    
+    # Join by play_id and game_id to ensure we're comparing the same rows
+    joined_df <- inner_join(
+      comparison_df, 
+      comparison_df2, 
+      by = c("play_id", "game_id")
+    )
+    
+    # Count cases where original has value but new is NA
+    not_transferred <- sum(!is.na(joined_df$original_value) & is.na(joined_df$new_value))
+    
+    # Calculate percentage lost
+    percent_lost <- ifelse(non_na_original > 0, 
+                           round((not_transferred / non_na_original) * 100, 2),
+                           0)
+    
+    # Add to results
+    results <- rbind(results, data.frame(
+      old_col = old_col,
+      new_col = new_col,
+      type = all_mappings$type[i],
+      position = all_mappings$position[i],
+      not_transferred_count = not_transferred,
+      total_ids_original = non_na_original,
+      percentage_lost = percent_lost,
+      stringsAsFactors = FALSE
+    ))
+  }
+  
+  # Create summary by type
+  type_summary <- results %>%
+    group_by(type) %>%
+    summarize(
+      total_not_transferred = sum(not_transferred_count),
+      total_original_ids = sum(total_ids_original),
+      overall_percentage_lost = round((total_not_transferred / total_original_ids) * 100, 2)
+    )
+  
+  # Create visualization function
+  create_loss_visualization <- function() {
+    # Create position visualization
+    position_plot <- ggplot(results, aes(x = factor(position), y = percentage_lost, fill = type)) +
+      geom_bar(stat = "identity", position = "dodge") +
+      facet_wrap(~ type, scales = "free_x") +
+      theme_minimal() +
+      labs(
+        title = "Percentage of Player IDs Not Transferred by Position",
+        x = "Position Number",
+        y = "Percentage Lost (%)",
+        fill = "Player Type"
+      ) +
+      theme(
+        plot.title = element_text(size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom"
+      )
+    
+    # Create type summary visualization
+    type_plot <- ggplot(type_summary, aes(x = type, y = overall_percentage_lost, fill = type)) +
+      geom_bar(stat = "identity") +
+      theme_minimal() +
+      labs(
+        title = "Overall Percentage of Player IDs Not Transferred by Type",
+        x = "Player Type",
+        y = "Percentage Lost (%)"
+      ) +
+      theme(
+        plot.title = element_text(size = 14, face = "bold"),
+        legend.position = "none"
+      )
+    
+    # Return both plots
+    return(list(position_plot = position_plot, type_plot = type_plot))
+  }
+  
+  # Return results and visualization function
+  return(list(
+    results = results,
+    type_summary = type_summary,
+    create_loss_visualization = create_loss_visualization
+  ))
+}
+
+# Run the analysis
+transfer_analysis <- compare_player_ids(cfd, cfd2)
+
+# Display detailed results table
+cat("\n=== PLAYER ID TRANSFER ANALYSIS ===\n")
+kable(transfer_analysis$results %>%
+        select(old_col, new_col, type, position, not_transferred_count, 
+               total_ids_original, percentage_lost) %>%
+        arrange(type, position),
+      col.names = c("Original Column", "New Column", "Type", "Position", 
+                    "IDs Not Transferred", "Total IDs in Original", "% Lost"))
+
+# Display type summary
+cat("\n=== SUMMARY BY PLAYER TYPE ===\n")
+kable(transfer_analysis$type_summary,
+      col.names = c("Player Type", "Total IDs Not Transferred", 
+                    "Total IDs in Original", "Overall % Lost"))
+
+# Create and display visualizations
+plots <- transfer_analysis$create_loss_visualization()
+plots$position_plot
+plots$type_plot
+
+# Grand total summary
+grand_total <- data.frame(
+  total_not_transferred = sum(transfer_analysis$results$not_transferred_count),
+  total_original_ids = sum(transfer_analysis$results$total_ids_original),
+  overall_percentage_lost = round((sum(transfer_analysis$results$not_transferred_count) / 
+                                   sum(transfer_analysis$results$total_ids_original)) * 100, 2)
+)
+
+cat("\n=== GRAND TOTAL ===\n")
+kable(grand_total,
+      col.names = c("Total IDs Not Transferred", "Total IDs in Original", "Overall % Lost"))
+```
+
+THE IDS ARE MATCHED PROPERLY

@@ -3,7 +3,7 @@ title: "Academic Tables for NFL Player Performance Models"
 output: 
   pdf_document:
     latex_engine: xelatex
-date: "2025-03-23"
+# date: "2025-03-23"
 ---
 
 ```{r setup, include=FALSE}

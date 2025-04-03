@@ -177,11 +177,11 @@ run_heckman <- function(select_data, outcome_data, n_validation = n_validation) 
   residuals <- as.numeric(as.character(y)) - z
   
   # Calculate GIMR (lambda) - Generalized inverse mills ratio
-  #GIMR <- dnorm(z) / (1 - z)
+  GIMR <- dnorm(z) / (1 - z)
   #GIMR <- dnorm(z, mean = mean(z), sd = sd(z)) / (1 - z)
   #GIMR <- z/(1-z)
   # make gimr random noise between -1 and 1
-  GIMR <- runif(nrow(rf_data), -1, 1)
+  #GIMR <- runif(nrow(rf_data), -1, 1)
 # Add GIMR to the data
 select_data[, GIMR := GIMR]
 
