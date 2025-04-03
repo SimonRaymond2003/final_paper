@@ -18,6 +18,14 @@ knitr::opts_chunk$set(comment = NA)
 
 ```{r load_matrices, warning=FALSE, message=FALSE}
 # Load all the matrices from CSVs
+# For standard errors
+off_grades_se <- read.csv("matrices/off_grades_se.csv", row.names = 1)
+off_yards_se <- read.csv("matrices/off_yards_se.csv", row.names = 1)
+off_completions_se <- read.csv("matrices/off_completions_se.csv", row.names = 1)
+def_stops_se <- read.csv("matrices/def_stops_se.csv", row.names = 1)
+def_grades_se <- read.csv("matrices/def_grades_se.csv", row.names = 1)
+def_tackles_se <- read.csv("matrices/def_tackles_se.csv", row.names = 1)
+
 # For T-values
 off_grades_tval <- read.csv("matrices/off_grades_tval.csv", row.names = 1)
 off_yards_tval <- read.csv("matrices/off_yards_tval.csv", row.names = 1)
@@ -56,6 +64,13 @@ rename_present_variables <- function(matrix) {
 }
 
 # Apply the renaming to all matrices
+off_grades_se <- rename_present_variables(off_grades_se)
+off_yards_se <- rename_present_variables(off_yards_se)
+off_completions_se <- rename_present_variables(off_completions_se)
+def_stops_se <- rename_present_variables(def_stops_se)
+def_grades_se <- rename_present_variables(def_grades_se)
+def_tackles_se <- rename_present_variables(def_tackles_se)
+
 off_grades_tval <- rename_present_variables(off_grades_tval)
 off_yards_tval <- rename_present_variables(off_yards_tval)
 off_completions_tval <- rename_present_variables(off_completions_tval)
@@ -109,6 +124,13 @@ rename_columns <- function(df) {
 }
 
 # Apply the column rename to all matrices
+off_grades_se <- rename_columns(off_grades_se)
+off_yards_se <- rename_columns(off_yards_se)
+off_completions_se <- rename_columns(off_completions_se)
+def_stops_se <- rename_columns(def_stops_se)
+def_grades_se <- rename_columns(def_grades_se)
+def_tackles_se <- rename_columns(def_tackles_se)
+
 off_grades_tval <- rename_columns(off_grades_tval)
 off_yards_tval <- rename_columns(off_yards_tval)
 off_completions_tval <- rename_columns(off_completions_tval)
@@ -494,5 +516,153 @@ format_and_print_table(
   defense_fstats_table,
   defense_control_data,
   "F-Statistics for ALL Defensive Position Variables Combined"
+)
+```
+
+```{r}
+# Function to compare Starter vs On-Field coefficients for all position variables combined
+compare_starter_onfield_all <- function(mfx_matrix, se_matrix, position_vars, model_type) {
+  # Get column indices
+  starter_col <- paste("Starter", model_type)
+  onfield_col <- paste("On-Field", model_type)
+  
+  # Calculate average coefficients across variables
+  starter_coef <- mean(mfx_matrix[position_vars, starter_col], na.rm = TRUE)
+  onfield_coef <- mean(mfx_matrix[position_vars, onfield_col], na.rm = TRUE)
+  
+  # Calculate pooled standard error
+  n_vars <- length(position_vars)
+  starter_se <- sqrt(sum(se_matrix[position_vars, starter_col]^2, na.rm = TRUE)) / n_vars
+  onfield_se <- sqrt(sum(se_matrix[position_vars, onfield_col]^2, na.rm = TRUE)) / n_vars
+  pooled_se <- sqrt(starter_se^2 + onfield_se^2)
+  
+  # Calculate z-statistic
+  z_stat <- (onfield_coef - starter_coef) / pooled_se
+  
+  # Calculate p-value
+  p_value <- 2 * (1 - pnorm(abs(z_stat)))
+  
+  # Add significance stars
+  stars <- ifelse(p_value < 0.01, "***",
+                 ifelse(p_value < 0.05, "**",
+                       ifelse(p_value < 0.10, "*", "")))
+  
+  # Determine direction
+  direction <- ifelse(is.na(z_stat), "(No difference)",
+                     ifelse(z_stat > 0, "(On-Field > Starter)", 
+                           ifelse(z_stat < 0, "(Starter > On-Field)", "(No difference)")))
+  
+  return(list(
+    z_stat = z_stat,
+    p_value = p_value,
+    stars = stars,
+    direction = direction
+  ))
+}
+
+# Create comparison tables for offense/defense combined
+create_comparison_table <- function(datasets, is_offense) {
+  # Initialize comparison data frame
+  comparison_data <- data.frame(
+    Dataset = character(),
+    LPM = character(),
+    LPM_Direction = character(),
+    Probit = character(),
+    Probit_Direction = character(),
+    Logit = character(),
+    Logit_Direction = character(),
+    stringsAsFactors = FALSE
+  )
+  
+  # Process each dataset
+  row_idx <- 1
+  for (dataset_key in names(datasets)) {
+    dataset <- datasets[[dataset_key]]
+    mfx_matrix <- dataset$mfx
+    
+    # Get standard error matrix
+    if (is_offense) {
+      if (dataset_key == "off_grades") se_matrix <- off_grades_se
+      else if (dataset_key == "off_yards") se_matrix <- off_yards_se
+      else se_matrix <- off_completions_se
+    } else {
+      if (dataset_key == "def_grades") se_matrix <- def_grades_se
+      else if (dataset_key == "def_stops") se_matrix <- def_stops_se
+      else se_matrix <- def_tackles_se
+    }
+    
+    # Get all position variables
+    position_vars <- get_position_variables(mfx_matrix, is_offense)
+    
+    # Perform comparisons for each model type
+    lpm_results <- compare_starter_onfield_all(mfx_matrix, se_matrix, position_vars, "LPM")
+    probit_results <- compare_starter_onfield_all(mfx_matrix, se_matrix, position_vars, "Probit")
+    logit_results <- compare_starter_onfield_all(mfx_matrix, se_matrix, position_vars, "Logit")
+    
+    # Add results to table
+    comparison_data[row_idx, "Dataset"] <- dataset$name
+    
+    comparison_data[row_idx, "LPM"] <- sprintf("%.2f%s [%.3f]", 
+                                              abs(lpm_results$z_stat), 
+                                              lpm_results$stars, 
+                                              lpm_results$p_value)
+    comparison_data[row_idx, "LPM_Direction"] <- lpm_results$direction
+    
+    comparison_data[row_idx, "Probit"] <- sprintf("%.2f%s [%.3f]", 
+                                                 abs(probit_results$z_stat), 
+                                                 probit_results$stars, 
+                                                 probit_results$p_value)
+    comparison_data[row_idx, "Probit_Direction"] <- probit_results$direction
+    
+    comparison_data[row_idx, "Logit"] <- sprintf("%.2f%s [%.3f]", 
+                                                abs(logit_results$z_stat), 
+                                                logit_results$stars, 
+                                                logit_results$p_value)
+    comparison_data[row_idx, "Logit_Direction"] <- logit_results$direction
+    
+    row_idx <- row_idx + 1
+  }
+  
+  return(comparison_data)
+}
+
+# Generate comparison tables
+offense_comparison <- create_comparison_table(offense_datasets, TRUE)
+defense_comparison <- create_comparison_table(defense_datasets, FALSE)
+
+# Function to print comparison tables
+print_comparison_table <- function(table_data, caption) {
+  kable(table_data, 
+        format = "latex",
+        booktabs = TRUE,
+        col.names = c("Dataset", "LPM", "", "Probit", "", "Logit", ""),
+        align = c('l', 'c', 'l', 'c', 'l', 'c', 'l'),
+        caption = caption,
+        escape = FALSE) %>%
+    kable_styling(latex_options = c("scale_down", "hold_position"),
+                 font_size = 9,
+                 full_width = FALSE) %>%
+    column_spec(1, width = "3cm") %>%
+    column_spec(c(2,4,6), width = "2.5cm") %>%
+    column_spec(c(3,5,7), width = "3cm") %>%
+    footnote(
+      symbol = c("* p < 0.10, ** p < 0.05, *** p < 0.01"),
+      general = paste("Z-statistics reported with p-values in brackets.",
+                     "Stars indicate significance level of difference between Starter and On-Field coefficients.",
+                     "Direction indicates which model has larger coefficient values.",
+                     "Tests performed on average coefficients across all position variables combined.")
+    )
+}
+
+# Print offense comparison table
+print_comparison_table(
+  offense_comparison,
+  "Offensive Model Comparisons - Starter vs On-Field (All Position Variables Combined)"
+)
+
+# Print defense comparison table
+print_comparison_table(
+  defense_comparison,
+  "Defensive Model Comparisons - Starter vs On-Field (All Position Variables Combined)"
 )
 ```

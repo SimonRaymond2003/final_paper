@@ -18,6 +18,14 @@ knitr::opts_chunk$set(comment = NA)
 
 ```{r load_matrices, warning=FALSE, message=FALSE}
 # Load all the matrices from CSVs
+# For standard errors
+off_grades_se <- read.csv("matrices/off_grades_se.csv", row.names = 1)
+off_yards_se <- read.csv("matrices/off_yards_se.csv", row.names = 1)
+off_completions_se <- read.csv("matrices/off_completions_se.csv", row.names = 1)
+def_stops_se <- read.csv("matrices/def_stops_se.csv", row.names = 1)
+def_grades_se <- read.csv("matrices/def_grades_se.csv", row.names = 1)
+def_tackles_se <- read.csv("matrices/def_tackles_se.csv", row.names = 1)
+
 # For T-values
 off_grades_tval <- read.csv("matrices/off_grades_tval.csv", row.names = 1)
 off_yards_tval <- read.csv("matrices/off_yards_tval.csv", row.names = 1)
@@ -56,6 +64,13 @@ rename_present_variables <- function(matrix) {
 }
 
 # Apply the renaming to all matrices
+off_grades_se <- rename_present_variables(off_grades_se)
+off_yards_se <- rename_present_variables(off_yards_se)
+off_completions_se <- rename_present_variables(off_completions_se)
+def_stops_se <- rename_present_variables(def_stops_se)
+def_grades_se <- rename_present_variables(def_grades_se)
+def_tackles_se <- rename_present_variables(def_tackles_se)
+
 off_grades_tval <- rename_present_variables(off_grades_tval)
 off_yards_tval <- rename_present_variables(off_yards_tval)
 off_completions_tval <- rename_present_variables(off_completions_tval)
@@ -90,6 +105,13 @@ rename_columns <- function(df) {
 }
 
 # Apply the column rename to all matrices
+off_grades_se <- rename_columns(off_grades_se)
+off_yards_se <- rename_columns(off_yards_se)
+off_completions_se <- rename_columns(off_completions_se)
+def_stops_se <- rename_columns(def_stops_se)
+def_grades_se <- rename_columns(def_grades_se)
+def_tackles_se <- rename_columns(def_tackles_se)
+
 off_grades_tval <- rename_columns(off_grades_tval)
 off_yards_tval <- rename_columns(off_yards_tval)
 off_completions_tval <- rename_columns(off_completions_tval)
@@ -580,6 +602,156 @@ control_header_idx <- nrow(joint_test_data) + 1
       general = paste("F-statistics reported with degrees of freedom [df1,df2] and significance levels.",
                      "Stars indicate significance of joint test for all variables in position group."),
       symbol = c("* p < 0.10, ** p < 0.05, *** p < 0.01")
+    )
+  
+  print(latex_table)
+}
+```
+
+```{r, results='asis', echo=FALSE, message=FALSE, warning=FALSE}
+# Function to compare Starter vs On-Field coefficients
+compare_starter_onfield <- function(mfx_matrix, se_matrix, position_vars, model_type) {
+  # Get column indices
+  starter_col <- paste("Starter", model_type)
+  onfield_col <- paste("On-Field", model_type)
+  
+  # Calculate average coefficients across variables
+  starter_coef <- mean(mfx_matrix[position_vars, starter_col], na.rm = TRUE)
+  onfield_coef <- mean(mfx_matrix[position_vars, onfield_col], na.rm = TRUE)
+  
+  # Calculate pooled standard error
+  n_vars <- length(position_vars)
+  starter_se <- sqrt(sum(se_matrix[position_vars, starter_col]^2, na.rm = TRUE)) / n_vars
+  onfield_se <- sqrt(sum(se_matrix[position_vars, onfield_col]^2, na.rm = TRUE)) / n_vars
+  pooled_se <- sqrt(starter_se^2 + onfield_se^2)
+  
+  # Calculate z-statistic
+  z_stat <- (onfield_coef - starter_coef) / pooled_se
+  
+  # Calculate p-value
+  p_value <- 2 * (1 - pnorm(abs(z_stat)))
+  
+  # Add significance stars
+  stars <- ifelse(p_value < 0.01, "***",
+                 ifelse(p_value < 0.05, "**",
+                       ifelse(p_value < 0.10, "*", "")))
+  
+  # Determine direction
+  direction <- ifelse(is.na(z_stat), "(No difference)",
+                     ifelse(z_stat > 0, "(On-Field > Starter)", 
+                           ifelse(z_stat < 0, "(Starter > On-Field)", "(No difference)")))
+  
+  return(list(
+    z_stat = z_stat,
+    p_value = p_value,
+    stars = stars,
+    direction = direction
+  ))
+}
+
+# Create comparison tables for each dataset
+for (dataset_idx in 1:length(dataset_names)) {
+  dataset_name <- dataset_names[dataset_idx]
+  
+  # Get matrices for this dataset
+  if (dataset_name == "Offense Grades") {
+    mfx_matrix <- off_grades_mfx
+    se_matrix <- off_grades_se
+    is_offense <- TRUE
+  } else if (dataset_name == "Offense Yards") {
+    mfx_matrix <- off_yards_mfx
+    se_matrix <- off_yards_se
+    is_offense <- TRUE
+  } else if (dataset_name == "Offense Completions") {
+    mfx_matrix <- off_completions_mfx
+    se_matrix <- off_completions_se
+    is_offense <- TRUE
+  } else if (dataset_name == "Defense Stops") {
+    mfx_matrix <- def_stops_mfx
+    se_matrix <- def_stops_se
+    is_offense <- FALSE
+  } else if (dataset_name == "Defense Grades") {
+    mfx_matrix <- def_grades_mfx
+    se_matrix <- def_grades_se
+    is_offense <- FALSE
+  } else {
+    mfx_matrix <- def_tackles_mfx
+    se_matrix <- def_tackles_se
+    is_offense <- FALSE
+  }
+  
+  # Organize variables by position groups
+  position_groups <- organize_position_groups(mfx_matrix, is_offense)
+  
+  # Create comparison table
+  comparison_data <- data.frame(
+    Position = character(),
+    LPM = character(),
+    LPM_Direction = character(),
+    Probit = character(),
+    Probit_Direction = character(),
+    Logit = character(),
+    Logit_Direction = character(),
+    stringsAsFactors = FALSE
+  )
+  
+  row_idx <- 1
+  for (group_name in names(position_groups)) {
+    if (length(position_groups[[group_name]]) > 0) {
+      # Add position group
+      display_name <- position_display_names[[group_name]]
+      
+      # Perform comparisons for each model type
+      lpm_results <- compare_starter_onfield(mfx_matrix, se_matrix, 
+                                           position_groups[[group_name]], "LPM")
+      probit_results <- compare_starter_onfield(mfx_matrix, se_matrix, 
+                                              position_groups[[group_name]], "Probit")
+      logit_results <- compare_starter_onfield(mfx_matrix, se_matrix, 
+                                             position_groups[[group_name]], "Logit")
+      
+      # Format results
+      comparison_data[row_idx, "Position"] <- paste0("\\textbf{", display_name, "}")
+      comparison_data[row_idx, "LPM"] <- sprintf("%.2f%s [%.3f]", 
+                                                abs(lpm_results$z_stat), 
+                                                lpm_results$stars, 
+                                                lpm_results$p_value)
+      comparison_data[row_idx, "LPM_Direction"] <- lpm_results$direction
+      
+      comparison_data[row_idx, "Probit"] <- sprintf("%.2f%s [%.3f]", 
+                                                   abs(probit_results$z_stat), 
+                                                   probit_results$stars, 
+                                                   probit_results$p_value)
+      comparison_data[row_idx, "Probit_Direction"] <- probit_results$direction
+      
+      comparison_data[row_idx, "Logit"] <- sprintf("%.2f%s [%.3f]", 
+                                                  abs(logit_results$z_stat), 
+                                                  logit_results$stars, 
+                                                  logit_results$p_value)
+      comparison_data[row_idx, "Logit_Direction"] <- logit_results$direction
+      
+      row_idx <- row_idx + 1
+    }
+  }
+  
+  # Generate LaTeX table
+  latex_table <- kable(comparison_data, 
+                      format = "latex",
+                      booktabs = TRUE,
+                      col.names = c("Position", "LPM", "", "Probit", "", "Logit", ""),
+                      align = c('l', 'c', 'l', 'c', 'l', 'c', 'l'),
+                      caption = paste(dataset_name, "Model Comparisons - Starter vs On-Field"),
+                      escape = FALSE) %>%
+    kable_styling(latex_options = c("scale_down", "hold_position"),
+                 font_size = 9,
+                 full_width = FALSE) %>%
+    column_spec(1, width = "3cm") %>%
+    column_spec(c(2,4,6), width = "2.5cm") %>%
+    column_spec(c(3,5,7), width = "3cm") %>%
+    footnote(
+      symbol = c("* p < 0.10, ** p < 0.05, *** p < 0.01"),
+      general = paste("Z-statistics reported with p-values in brackets.",
+                     "Stars indicate significance level of difference between Starter and On-Field coefficients.",
+                     "Direction indicates which model has larger coefficient values.")
     )
   
   print(latex_table)
