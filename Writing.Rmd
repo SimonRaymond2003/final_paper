@@ -270,6 +270,38 @@ knitr::include_graphics("table_images/off3.png")
 knitr::include_graphics("table_images/def3.png")
 ```
 
+\newpage
+
+### Differences in Model Coeficients
+
+```{r offense-grades-table-diffs, fig.cap="Offense Grades Differences Table", out.width="100%"}
+knitr::include_graphics("table_images/off1.5.png")
+```
+
+\newpage
+
+```{r defense-grades-table-diffs, fig.cap="Defense Grades Differences Table", out.width="100%"}
+knitr::include_graphics("table_images/def1.5.png")
+```
+
+\newpage
+
+```{r offense-grades-table-diffs2, fig.cap="Offense Player Grades Joint Significance Differences Table", out.width="100%"}
+knitr::include_graphics("table_images/off2.5.png")
+```
+
+```{r defense-grades-table-diffs2, fig.cap="Defense Player Grades Joint Significance Differences Table", out.width="100%"}
+knitr::include_graphics("table_images/def2.5.png")
+```
+
+```{r offense-grades-table-diffs3, fig.cap="Offense Grades Joint Significance Differences Table", out.width="100%"}
+knitr::include_graphics("table_images/off3.5.png")
+```
+
+```{r defense-grades-table-diffs3, fig.cap="Defense Grades Joint Significance Differences Table", out.width="100%"}
+knitr::include_graphics("table_images/def3.5.png")
+```
+
 ## Discusion
 
 The interpretation of Starter and On-Field Models leads us to ask why there is a difference in quality of statistical significance. In our F-Statistic tables Starter Models appear to capture the performance of positions and teams better. Individual player features also seem to measure player performance better as show by a larger amount of significant variables. This leads us to believe that Starter Models have less noise in measurement then On-Field Models due to a higher consistency of players. On-field measurements are subject to players being subbed in and out of the game. While it provides greater detail in measurement it makes player slots have more variance in terms of which players are present where. For example the LB 2 of a team can be slotted into either LB slot 1 or 2 depending on the availability of the LB 1 in a On-Field play. However for a given game that LB 2 player will stay in the second slot for the entire game. 

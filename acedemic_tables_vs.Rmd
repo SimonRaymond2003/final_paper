@@ -32,41 +32,51 @@ def_stops_se <- read.csv("matrices/def_stops_se.csv", row.names = 1)
 def_grades_se <- read.csv("matrices/def_grades_se.csv", row.names = 1)
 def_tackles_se <- read.csv("matrices/def_tackles_se.csv", row.names = 1)
 
-# Function to rename present variables in matrices to a pattern that won't match position prefixes
-rename_present_variables <- function(matrix) {
-  # Count to keep track of how many we've renamed
-  count <- 0
+# Function to rename both present and missing variables in matrices
+rename_variables <- function(matrix) {
+  # Counts to keep track of how many we've renamed
+  present_count <- 0
+  missing_count <- 0
   
   # Get all row names
   all_row_names <- rownames(matrix)
   
-  # Check each row name for "present" anywhere in the string (case insensitive)
+  # Check each row name for "present" or "missing" anywhere in the string (case insensitive)
   for (i in 1:length(all_row_names)) {
     row_name <- all_row_names[i]
+    
+    # Handle "present" variables
     if (grepl("present", row_name, ignore.case = TRUE)) {
-      count <- count + 1
+      present_count <- present_count + 1
       # Replace the name with a simple pattern that won't match position prefixes
-      rownames(matrix)[i] <- paste0("PresentVar", count)
+      rownames(matrix)[i] <- paste0("PresentVar", present_count)
+    }
+    # Handle "missing" variables
+    else if (grepl("missing", row_name, ignore.case = TRUE)) {
+      missing_count <- missing_count + 1
+      # Replace the name with a simple pattern that won't match position prefixes
+      rownames(matrix)[i] <- paste0("MissingVar", missing_count)
     }
   }
   
   return(matrix)
 }
 
-# Apply the renaming to all matrices
-off_grades_mfx <- rename_present_variables(off_grades_mfx)
-off_yards_mfx <- rename_present_variables(off_yards_mfx)
-off_completions_mfx <- rename_present_variables(off_completions_mfx)
-def_stops_mfx <- rename_present_variables(def_stops_mfx)
-def_grades_mfx <- rename_present_variables(def_grades_mfx)
-def_tackles_mfx <- rename_present_variables(def_tackles_mfx)
+# Apply the renaming to all marginal effects matrices
+off_grades_mfx <- rename_variables(off_grades_mfx)
+off_yards_mfx <- rename_variables(off_yards_mfx)
+off_completions_mfx <- rename_variables(off_completions_mfx)
+def_stops_mfx <- rename_variables(def_stops_mfx)
+def_grades_mfx <- rename_variables(def_grades_mfx)
+def_tackles_mfx <- rename_variables(def_tackles_mfx)
 
-off_grades_se <- rename_present_variables(off_grades_se)
-off_yards_se <- rename_present_variables(off_yards_se)
-off_completions_se <- rename_present_variables(off_completions_se)
-def_stops_se <- rename_present_variables(def_stops_se)
-def_grades_se <- rename_present_variables(def_grades_se)
-def_tackles_se <- rename_present_variables(def_tackles_se)
+# Apply the renaming to all standard error matrices
+off_grades_se <- rename_variables(off_grades_se)
+off_yards_se <- rename_variables(off_yards_se)
+off_completions_se <- rename_variables(off_completions_se)
+def_stops_se <- rename_variables(def_stops_se)
+def_grades_se <- rename_variables(def_grades_se)
+def_tackles_se <- rename_variables(def_tackles_se)
 
 # Function to rename columns consistently
 rename_columns <- function(df) {

@@ -141,3 +141,255 @@ off_grades_outcome <- transform_column_names(off_grades_outcome)
 ```
 
 
+```{r}
+# starter rb run grades 12w
+v <- off_grades_outcome$starter_RB_grades_run_12w
+#how many = 0
+length(which(v == 0))
+# what weeks are they from
+v_weeks <- off_grades_outcome$week[which(v == 0)]
+#plot that
+library(ggplot2)
+ggplot(data = data.frame(week = v_weeks), aes(x = week)) +
+  geom_bar() +
+  labs(title = "Weeks with Zero Starter RB Run Grades", x = "Week", y = "Count") +
+  theme_minimal()
+```
+
+
+
+```{r}
+library(nflverse)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Load depth chart data for 2023
+depth_charts <- nflreadr::load_depth_charts(seasons = 2023)
+
+# Filter for running backs with depth position 1
+rb_depth1 <- depth_charts %>%
+  filter(
+    position == "RB",
+    depth_position == "RB",
+    depth_team == "1",
+    game_type == "REG" # Regular season only
+  ) %>%
+  select(season, week, club_code, gsis_id, full_name) %>%
+  arrange(club_code, week)
+
+# Make sure we have one entry per team per week by taking the first RB listed per team/week
+# (in case of duplicates)
+rb_depth1 <- rb_depth1 %>%
+  group_by(club_code, week) %>%
+  slice(1) %>%
+  ungroup()
+
+# Create a data frame to track week-to-week changes
+rb_changes <- rb_depth1 %>%
+  group_by(club_code) %>%
+  # Compare current player with previous week's player
+  mutate(
+    prev_player = lag(gsis_id),
+    changed = ifelse(is.na(prev_player), FALSE, gsis_id != prev_player),
+    # Get player names for visualization
+    prev_name = lag(full_name),
+    change_description = ifelse(changed, paste(prev_name, "→", full_name), NA)
+  ) %>%
+  ungroup()
+
+# Count total changes per team
+team_changes <- rb_changes %>%
+  group_by(club_code) %>%
+  summarize(
+    total_changes = sum(changed, na.rm = TRUE),
+    # Get list of all RBs who started
+    unique_starters = n_distinct(gsis_id),
+    starter_names = paste(unique(full_name[!duplicated(gsis_id)]), collapse = ", ")
+  ) %>%
+  ungroup()
+
+# Verify the total changes
+print("Total changes by team:")
+print(team_changes %>% select(club_code, total_changes) %>% arrange(desc(total_changes)))
+
+# Create a table of all changes for reference
+all_changes <- rb_changes %>%
+  filter(changed == TRUE) %>%
+  select(club_code, week, change_description)
+
+# Get changes by week across all teams
+weekly_changes <- rb_changes %>%
+  group_by(week) %>%
+  summarize(changes_count = sum(changed, na.rm = TRUE)) %>%
+  ungroup()
+
+# Create plot 1: Teams by alphabetical order
+p1 <- ggplot(team_changes, aes(x = reorder(club_code, club_code), y = total_changes)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_text(aes(label = total_changes), vjust = -0.5, size = 3) +
+  labs(
+    title = "Number of RB1 Changes by Team (Alphabetical)",
+    subtitle = "2023 NFL Season",
+    x = "Team",
+    y = "Number of Changes"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major.x = element_blank()
+  )
+
+# Create plot 2: Teams by total switches (descending)
+p2 <- ggplot(team_changes, aes(x = reorder(club_code, -total_changes), y = total_changes)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_text(aes(label = total_changes), vjust = -0.5, size = 3) +
+  labs(
+    title = "Number of RB1 Changes by Team (Most to Least)",
+    subtitle = "2023 NFL Season",
+    x = "Team",
+    y = "Number of Changes"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major.x = element_blank()
+  )
+
+# Create plot 3: Changes by week across the season
+p3 <- ggplot(weekly_changes, aes(x = week, y = changes_count)) +
+  geom_line(group = 1, color = "steelblue", size = 1) +
+  geom_point(size = 3, color = "steelblue") +
+  geom_text(aes(label = changes_count), vjust = -1, size = 3) +
+  scale_x_continuous(breaks = 1:18) +
+  labs(
+    title = "RB1 Changes Across Weeks",
+    subtitle = "2023 NFL Season - All Teams Combined",
+    x = "Week",
+    y = "Number of Teams Changing RB1"
+  ) +
+  theme_minimal()
+
+# Create a modified heatmap
+# First ensure we have complete data
+complete_data <- expand.grid(
+  club_code = unique(rb_depth1$club_code),
+  week = 1:18
+) %>%
+  as_tibble()
+
+changes_heatmap <- rb_changes %>%
+  select(club_code, week, changed) %>%
+  right_join(complete_data, by = c("club_code", "week")) %>%
+  mutate(change_indicator = ifelse(is.na(changed) | !changed, 0, 1)) %>%
+  arrange(club_code, week)
+
+# Get the order of teams by total changes
+team_order <- team_changes %>%
+  arrange(desc(total_changes)) %>%
+  pull(club_code)
+
+# Set factor levels for proper ordering
+changes_heatmap$club_code <- factor(changes_heatmap$club_code, levels = team_order)
+
+# Create the heatmap
+p4 <- ggplot(changes_heatmap, aes(x = week, y = club_code, fill = factor(change_indicator))) +
+  geom_tile(color = "white") +
+  scale_fill_manual(values = c("0" = "lightgray", "1" = "darkred"), 
+                    labels = c("0" = "No Change", "1" = "RB1 Changed"),
+                    name = "Status") +
+  scale_x_continuous(breaks = 1:18) +
+  labs(
+    title = "RB1 Changes by Team and Week",
+    subtitle = "2023 NFL Season (Teams ordered by most to least changes)",
+    x = "Week",
+    y = "Team"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "bottom"
+  )
+
+# Print results
+print("Top 5 teams with most RB1 changes:")
+print(head(team_changes[order(-team_changes$total_changes), c("club_code", "total_changes", "unique_starters")], 5))
+
+print("Teams with no RB1 changes:")
+print(team_changes[team_changes$total_changes == 0, c("club_code", "starter_names")])
+
+# Print total number of changes across all teams
+total_league_changes <- sum(team_changes$total_changes)
+print(paste("Total RB1 changes across the league in 2023:", total_league_changes))
+
+# Print weeks with most changes
+print("Weeks with most RB1 changes:")
+print(head(weekly_changes[order(-weekly_changes$changes_count), ], 5))
+
+# Display all plots
+print(p1)
+print(p2)
+print(p3)
+print(p4)
+
+# Create a detailed table showing the starting RB for each team by week
+rb_starters_by_week <- rb_depth1 %>%
+  select(club_code, week, full_name) %>%
+  pivot_wider(
+    names_from = week,
+    values_from = full_name,
+    names_prefix = "Week_"
+  ) %>%
+  arrange(club_code)
+
+print("RB1 starter by team and week (first 5 teams):")
+print(head(rb_starters_by_week, 5))
+
+# For a more compact view, show each team and its RB1 sequence with change points marked
+rb_sequence <- rb_changes %>%
+  group_by(club_code) %>%
+  mutate(
+    rb_sequence = ifelse(week == 1 | changed, paste0("[W", week, "] ", full_name), full_name),
+    marked = week == 1 | changed
+  ) %>%
+  filter(marked) %>%
+  summarize(sequence = paste(rb_sequence, collapse = " → ")) %>%
+  arrange(club_code)
+
+print("RB1 starter sequences by team (first 5 teams):")
+print(head(rb_sequence, 5))
+```
+
+EVEN IF I HAVE THE ID (which we do on par with every other position) THERE STILL ARE 0s
+
+```{r}
+# Extract all Patriots RB1 data with all relevant columns
+rbs <- depth_charts %>%
+  filter(
+    club_code == "NE",
+    position == "RB", 
+    depth_position == "RB",
+    depth_team == "1",
+    game_type == "REG"
+  ) %>%
+  select(season, week, club_code, full_name, position, depth_position, depth_team, gsis_id, jersey_number) %>%
+  arrange(week)
+```
+
+```{r}
+# Extract all Patriots offensive line data with all relevant columns
+OLs <- depth_charts %>%
+  filter(
+    club_code == "LA",
+    position %in% c("C", "G", "T"), # Offensive line positions
+    depth_team == "1",  # Starters only
+    game_type == "REG"
+  ) %>%
+  select(season, week, club_code, full_name, position, depth_position, depth_team, gsis_id, jersey_number)
+```
+
+
+check how many players have taken less then X snaps in the past 12 weeks
+
+THERE ARE 0s in the stats that we dont have missing presence 1 valiues because there is a rb on the field we jus tknow nothing about that rb
+

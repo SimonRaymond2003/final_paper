@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.3.28)  30 MAR 2025 22:06
+This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.3.31)  4 APR 2025 14:44
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -854,10 +854,10 @@ LaTeX Warning: There were multiply-defined labels.
 Here is how much of TeX's memory you used:
  18329 strings out of 475848
  334433 string characters out of 5773460
- 1503683 words of memory out of 5000000
+ 1502647 words of memory out of 5000000
  41009 multiletter control sequences out of 15000+600000
  564445 words of font info for 80 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 90i,14n,114p,471b,389s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 90i,14n,114p,472b,389s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
 Output written on acedemic_tables_bad.pdf (6 pages).

@@ -42,21 +42,28 @@ def_stops_mfx <- read.csv("matrices/def_stops_mfx.csv", row.names = 1)
 def_grades_mfx <- read.csv("matrices/def_grades_mfx.csv", row.names = 1)
 def_tackles_mfx <- read.csv("matrices/def_tackles_mfx.csv", row.names = 1)
 
-# Function to simplify "present" variable names in matrices to a standard pattern
-rename_present_variables <- function(matrix) {
-  # Count to keep track of how many we've renamed
-  count <- 0
+# Function to rename variables to avoid pattern matching with position prefixes
+rename_variables <- function(matrix) {
+  # Initialize counters
+  present_count <- 0
+  missing_count <- 0
   
   # Get all row names
   all_row_names <- rownames(matrix)
   
-  # Check each row name for "present" anywhere in the string (case insensitive)
+  # Process each row name
   for (i in 1:length(all_row_names)) {
     row_name <- all_row_names[i]
+    
+    # Handle "present" variables
     if (grepl("present", row_name, ignore.case = TRUE)) {
-      count <- count + 1
-      # Replace the name with a simple pattern that won't match position prefixes
-      rownames(matrix)[i] <- paste0("PresentVar", count)
+      present_count <- present_count + 1
+      rownames(matrix)[i] <- paste0("PresentVar", present_count)
+    }
+    # Handle "missing_information" variables
+    else if (grepl("missing_information", row_name, ignore.case = TRUE)) {
+      missing_count <- missing_count + 1
+      rownames(matrix)[i] <- paste0("MissingVar", missing_count)
     }
   }
   
@@ -64,19 +71,19 @@ rename_present_variables <- function(matrix) {
 }
 
 # Apply the renaming to all matrices
-off_grades_tval <- rename_present_variables(off_grades_tval)
-off_yards_tval <- rename_present_variables(off_yards_tval)
-off_completions_tval <- rename_present_variables(off_completions_tval)
-def_stops_tval <- rename_present_variables(def_stops_tval)
-def_grades_tval <- rename_present_variables(def_grades_tval)
-def_tackles_tval <- rename_present_variables(def_tackles_tval)
+off_grades_tval <- rename_variables(off_grades_tval)
+off_yards_tval <- rename_variables(off_yards_tval)
+off_completions_tval <- rename_variables(off_completions_tval)
+def_stops_tval <- rename_variables(def_stops_tval)
+def_grades_tval <- rename_variables(def_grades_tval)
+def_tackles_tval <- rename_variables(def_tackles_tval)
 
-off_grades_mfx <- rename_present_variables(off_grades_mfx)
-off_yards_mfx <- rename_present_variables(off_yards_mfx)
-off_completions_mfx <- rename_present_variables(off_completions_mfx)
-def_stops_mfx <- rename_present_variables(def_stops_mfx)
-def_grades_mfx <- rename_present_variables(def_grades_mfx)
-def_tackles_mfx <- rename_present_variables(def_tackles_mfx)
+off_grades_mfx <- rename_variables(off_grades_mfx)
+off_yards_mfx <- rename_variables(off_yards_mfx)
+off_completions_mfx <- rename_variables(off_completions_mfx)
+def_stops_mfx <- rename_variables(def_stops_mfx)
+def_grades_mfx <- rename_variables(def_grades_mfx)
+def_tackles_mfx <- rename_variables(def_tackles_mfx)
 ```
 
 
@@ -184,6 +191,7 @@ organize_player_vars <- function(matrix, is_offense) {
   all_variables <- rownames(matrix)
   position_groups <- list()
   
+
   if (is_offense) {
     # Define offensive position groups
     position_groups[["QB"]] <- grep("^QB_", all_variables, value = TRUE)

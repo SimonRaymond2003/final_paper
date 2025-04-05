@@ -1,0 +1,124 @@
+---
+title: "fix_data"
+output: pdf_document
+date: "2025-04-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load necessary library
+library(data.table)
+
+# Load limited info datasets
+limited_info_regular <- fread("limited_info_regular.csv")
+limited_info_starter <- fread("limited_info_starter.csv")
+
+# Print row counts to confirm
+cat("Rows in limited_info_regular:", nrow(limited_info_regular), "\n")
+cat("Rows in limited_info_starter:", nrow(limited_info_starter), "\n")
+
+# Define player slots to keep
+offense_slots_to_keep <- c(1, 4, 8, 9, 10, 14, 17, 18, 19, 20, 21)
+defense_slots_to_keep <- c(1, 2, 3, 4, 9, 10, 11, 12, 15, 16, 17, 20, 21, 22)
+
+# Function to filter player-related columns
+filter_player_columns <- function(data, offense_slots, defense_slots) {
+  col_names <- names(data)
+  
+  # Identify columns to keep
+  cols_to_keep <- c()
+  
+  # Keep non-player columns
+  non_player_cols <- col_names[!grepl("(offense|defense)_player_\\d+", col_names)]
+  cols_to_keep <- c(cols_to_keep, non_player_cols)
+  
+  # Keep specified offense player slots
+  for (slot in offense_slots) {
+    pattern <- paste0("offense_player_", slot, "_")
+    slot_cols <- col_names[grepl(pattern, col_names) | col_names == paste0("offense_player_", slot, "_present")]
+    cols_to_keep <- c(cols_to_keep, slot_cols)
+  }
+  
+  # Keep specified defense player slots
+  for (slot in defense_slots) {
+    pattern <- paste0("defense_player_", slot, "_")
+    slot_cols <- col_names[grepl(pattern, col_names) | col_names == paste0("defense_player_", slot, "_present")]
+    cols_to_keep <- c(cols_to_keep, slot_cols)
+  }
+  
+  # Also handle starter columns with the same logic
+  for (slot in offense_slots) {
+    pattern <- paste0("starter_offense_player_", slot, "_")
+    slot_cols <- col_names[grepl(pattern, col_names)]
+    cols_to_keep <- c(cols_to_keep, slot_cols)
+  }
+  
+  for (slot in defense_slots) {
+    pattern <- paste0("starter_defense_player_", slot, "_")
+    slot_cols <- col_names[grepl(pattern, col_names)]
+    cols_to_keep <- c(cols_to_keep, slot_cols)
+  }
+  
+  # Return filtered dataset
+  return(data[, .SD, .SDcols = cols_to_keep])
+}
+
+# Define the CCAFD outcome datasets to process
+datasets <- list(
+  list(outcome = "processed_predict_ccafd_off_grades.csv.csv.gz"),
+  list(outcome = "processed_predict_ccafd_off_yards.csv.csv.gz"),
+  list(outcome = "processed_predict_ccafd_off_completions.csv.csv.gz"),
+  list(outcome = "processed_predict_ccafd_def_stops.csv.csv.gz"),
+  list(outcome = "processed_predict_ccafd_def_grades.csv.csv.gz"),
+  list(outcome = "processed_predict_ccafd_def_tackles.csv.csv.gz")
+)
+
+# Process each dataset
+for (dataset in datasets) {
+  # Extract file name
+  outcome_file <- dataset$outcome
+  
+  # Read the CCAFD dataset
+  ccafd_data <- fread(outcome_file)
+  
+  # Original row count and column count
+  original_rows <- nrow(ccafd_data)
+  original_cols <- ncol(ccafd_data)
+  
+  # Filter player slots in limited_info datasets
+  filtered_reg_cols <- filter_player_columns(limited_info_regular, offense_slots_to_keep, defense_slots_to_keep)
+  filtered_start_cols <- filter_player_columns(limited_info_starter, offense_slots_to_keep, defense_slots_to_keep)
+  
+  # Remove my_id from the filtered datasets (since it's already in ccafd_data)
+  filtered_reg_cols <- filtered_reg_cols[, .SD, .SDcols = setdiff(names(filtered_reg_cols), "my_id")]
+  filtered_start_cols <- filtered_start_cols[, .SD, .SDcols = setdiff(names(filtered_start_cols), "my_id")]
+  
+  # Make sure row counts match before cbind
+  if (nrow(ccafd_data) != nrow(filtered_reg_cols) || nrow(ccafd_data) != nrow(filtered_start_cols)) {
+    cat("Error: Row counts don't match for", outcome_file, "\n")
+    cat("CCAFD rows:", nrow(ccafd_data), 
+        "Regular info rows:", nrow(filtered_reg_cols), 
+        "Starter info rows:", nrow(filtered_start_cols), "\n")
+    next
+  }
+  
+  # Combine all columns using cbind
+  combined_data <- cbind(ccafd_data, filtered_reg_cols, filtered_start_cols)
+  
+  # Verify column count
+  combined_cols <- ncol(combined_data)
+  filtered_cols <- ncol(filtered_reg_cols) + ncol(filtered_start_cols)
+  
+  cat("File:", outcome_file, 
+      "- Original rows:", original_rows, "Combined rows:", nrow(combined_data),
+      "- Original cols:", original_cols, "After filtering added:", filtered_cols, "Combined cols:", combined_cols, "\n")
+  
+  # Write the combined dataset back to the same filename
+  fwrite(combined_data, outcome_file)
+}
+cat("All processing completed successfully.\n")
+```
+

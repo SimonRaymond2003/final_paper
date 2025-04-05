@@ -210,8 +210,3 @@ run_models_and_get_marginal_effects <- function(data_path) {
 results <- run_models_and_get_marginal_effects("processed_predict_ccafd_off_grades.csv.csv.gz")
 # View(results)
 ```
-
-```{r}
-
-```
-

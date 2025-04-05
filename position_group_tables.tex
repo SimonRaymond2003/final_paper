@@ -1,0 +1,409 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Position Group Tables for NFL Player Performance Models},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Position Group Tables for NFL Player Performance Models}
+\author{}
+\date{2025-03-23}
+
+\begin{document}
+\maketitle
+
+\begin{table}[!h]
+\centering
+\caption{\label{tab:unnamed-chunk-2}Offense Grades Model Results - Position Groups}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\fontsize{9}{11}\selectfont
+\begin{tabular}[t]{>{\raggedright\arraybackslash}p{3.5cm}ccccccccc}
+\toprule
+\multicolumn{1}{c}{ } & \multicolumn{3}{c}{Starter Models} & \multicolumn{3}{c}{On-Field Models} & \multicolumn{3}{c}{Attempt Models} \\
+\cmidrule(l{3pt}r{3pt}){2-4} \cmidrule(l{3pt}r{3pt}){5-7} \cmidrule(l{3pt}r{3pt}){8-10}
+\textbf{Variable} & \textbf{Starter LPM} & \textbf{Starter Probit} & \textbf{Starter Logit} & \textbf{On-Field LPM} & \textbf{On-Field Probit} & \textbf{On-Field Logit} & \textbf{Attempt LPM} & \textbf{Attempt Probit} & \textbf{Attempt Logit}\\
+\midrule
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Quarterbacks}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.93 [4,4015]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.19 [4,4015]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.27 [4,4015]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.55* [3,4016]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{3.20** [3,4016]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{3.27** [3,4016]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.74** [3,25605]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.92 [3,25605]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.09* [3,25605]}}\\
+\cellcolor[HTML]{F2F2F2}{Running Backs} & \cellcolor[HTML]{F2F2F2}{1.10 [6,4013]} & \cellcolor[HTML]{F2F2F2}{1.28 [6,4013]} & \cellcolor[HTML]{F2F2F2}{1.22 [6,4013]} & \cellcolor[HTML]{F2F2F2}{0.42 [6,4013]} & \cellcolor[HTML]{F2F2F2}{0.40 [6,4013]} & \cellcolor[HTML]{F2F2F2}{0.39 [6,4013]} & \cellcolor[HTML]{F2F2F2}{0.61 [5,25603]} & \cellcolor[HTML]{F2F2F2}{0.78 [5,25603]} & \cellcolor[HTML]{F2F2F2}{0.75 [5,25603]}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Wide Receivers}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.77 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.86 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.89 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.28 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.38 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.35 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.22 [12,25596]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.09 [12,25596]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.09 [12,25596]}}\\
+\cellcolor[HTML]{F2F2F2}{Tight Ends} & \cellcolor[HTML]{F2F2F2}{1.81 [5,4014]} & \cellcolor[HTML]{F2F2F2}{1.90* [5,4014]} & \cellcolor[HTML]{F2F2F2}{1.98* [5,4014]} & \cellcolor[HTML]{F2F2F2}{1.93* [5,4014]} & \cellcolor[HTML]{F2F2F2}{2.43** [5,4014]} & \cellcolor[HTML]{F2F2F2}{2.41** [5,4014]} & \cellcolor[HTML]{F2F2F2}{0.41 [5,25603]} & \cellcolor[HTML]{F2F2F2}{0.41 [5,25603]} & \cellcolor[HTML]{F2F2F2}{0.38 [5,25603]}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Offensive Line}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.15** [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.38*** [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.40*** [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.87 [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.97 [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.03 [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.50 [10,25598]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.72 [10,25598]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.69 [10,25598]}}\\
+\cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\textbf{Control Variables}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Game Situation}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{F2F2F2}{Coach Variables} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Team Stats}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{F2F2F2}{Season/Team FE} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{No} & \cellcolor[HTML]{F2F2F2}{No} & \cellcolor[HTML]{F2F2F2}{No}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Coach FE}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{F2F2F2}{GIMR} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{No} & \cellcolor[HTML]{F2F2F2}{No} & \cellcolor[HTML]{F2F2F2}{No}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Player Presence}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}}\\
+\cellcolor[HTML]{F2F2F2}{Control Def. Players} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Control Off. Players}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}}\\
+\bottomrule
+\multicolumn{10}{l}{\rule{0pt}{1em}\textit{Note: }}\\
+\multicolumn{10}{l}{\rule{0pt}{1em}F-statistics reported with degrees of freedom [df1,df2] and significance levels. Stars indicate significance of joint test for all variables in position group.}\\
+\multicolumn{10}{l}{\rule{0pt}{1em}\textsuperscript{*} * p < 0.10, ** p < 0.05, *** p < 0.01}\\
+\end{tabular}}
+\end{table}
+\begin{table}[!h]
+\centering
+\caption{\label{tab:unnamed-chunk-2}Offense Yards Model Results - Position Groups}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\fontsize{9}{11}\selectfont
+\begin{tabular}[t]{>{\raggedright\arraybackslash}p{3.5cm}ccccccccc}
+\toprule
+\multicolumn{1}{c}{ } & \multicolumn{3}{c}{Starter Models} & \multicolumn{3}{c}{On-Field Models} & \multicolumn{3}{c}{Attempt Models} \\
+\cmidrule(l{3pt}r{3pt}){2-4} \cmidrule(l{3pt}r{3pt}){5-7} \cmidrule(l{3pt}r{3pt}){8-10}
+\textbf{Variable} & \textbf{Starter LPM} & \textbf{Starter Probit} & \textbf{Starter Logit} & \textbf{On-Field LPM} & \textbf{On-Field Probit} & \textbf{On-Field Logit} & \textbf{Attempt LPM} & \textbf{Attempt Probit} & \textbf{Attempt Logit}\\
+\midrule
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Quarterbacks}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{3.63*** [4,4015]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{4.54*** [4,4015]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{4.47*** [4,4015]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.45 [3,4016]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.58 [3,4016]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.49 [3,4016]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.20* [3,25605]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.48 [3,25605]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.36 [3,25605]}}\\
+\cellcolor[HTML]{F2F2F2}{Running Backs} & \cellcolor[HTML]{F2F2F2}{1.31 [6,4013]} & \cellcolor[HTML]{F2F2F2}{1.49 [6,4013]} & \cellcolor[HTML]{F2F2F2}{1.49 [6,4013]} & \cellcolor[HTML]{F2F2F2}{1.54 [6,4013]} & \cellcolor[HTML]{F2F2F2}{1.60 [6,4013]} & \cellcolor[HTML]{F2F2F2}{1.54 [6,4013]} & \cellcolor[HTML]{F2F2F2}{2.09* [5,25603]} & \cellcolor[HTML]{F2F2F2}{2.97** [5,25603]} & \cellcolor[HTML]{F2F2F2}{2.63** [5,25603]}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Wide Receivers}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.45 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.64* [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.67** [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.57 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.58 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.60 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.59 [12,25596]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.63 [12,25596]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.66 [12,25596]}}\\
+\cellcolor[HTML]{F2F2F2}{Tight Ends} & \cellcolor[HTML]{F2F2F2}{1.83 [5,4014]} & \cellcolor[HTML]{F2F2F2}{2.21* [5,4014]} & \cellcolor[HTML]{F2F2F2}{2.19* [5,4014]} & \cellcolor[HTML]{F2F2F2}{1.36 [5,4014]} & \cellcolor[HTML]{F2F2F2}{1.80 [5,4014]} & \cellcolor[HTML]{F2F2F2}{1.76 [5,4014]} & \cellcolor[HTML]{F2F2F2}{0.27 [5,25603]} & \cellcolor[HTML]{F2F2F2}{0.52 [5,25603]} & \cellcolor[HTML]{F2F2F2}{0.28 [5,25603]}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Offensive Line}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.56 [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.71* [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.76* [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.86 [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.91 [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.97 [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.50 [10,25598]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.73 [10,25598]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.71 [10,25598]}}\\
+\cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\textbf{Control Variables}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Game Situation}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{F2F2F2}{Coach Variables} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Team Stats}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{F2F2F2}{Season/Team FE} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{No} & \cellcolor[HTML]{F2F2F2}{No} & \cellcolor[HTML]{F2F2F2}{No}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Coach FE}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{F2F2F2}{GIMR} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{No} & \cellcolor[HTML]{F2F2F2}{No} & \cellcolor[HTML]{F2F2F2}{No}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Player Presence}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}}\\
+\cellcolor[HTML]{F2F2F2}{Control Def. Players} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Control Off. Players}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}}\\
+\bottomrule
+\multicolumn{10}{l}{\rule{0pt}{1em}\textit{Note: }}\\
+\multicolumn{10}{l}{\rule{0pt}{1em}F-statistics reported with degrees of freedom [df1,df2] and significance levels. Stars indicate significance of joint test for all variables in position group.}\\
+\multicolumn{10}{l}{\rule{0pt}{1em}\textsuperscript{*} * p < 0.10, ** p < 0.05, *** p < 0.01}\\
+\end{tabular}}
+\end{table}
+\begin{table}[!h]
+\centering
+\caption{\label{tab:unnamed-chunk-2}Offense Completions Model Results - Position Groups}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\fontsize{9}{11}\selectfont
+\begin{tabular}[t]{>{\raggedright\arraybackslash}p{3.5cm}ccccccccc}
+\toprule
+\multicolumn{1}{c}{ } & \multicolumn{3}{c}{Starter Models} & \multicolumn{3}{c}{On-Field Models} & \multicolumn{3}{c}{Attempt Models} \\
+\cmidrule(l{3pt}r{3pt}){2-4} \cmidrule(l{3pt}r{3pt}){5-7} \cmidrule(l{3pt}r{3pt}){8-10}
+\textbf{Variable} & \textbf{Starter LPM} & \textbf{Starter Probit} & \textbf{Starter Logit} & \textbf{On-Field LPM} & \textbf{On-Field Probit} & \textbf{On-Field Logit} & \textbf{Attempt LPM} & \textbf{Attempt Probit} & \textbf{Attempt Logit}\\
+\midrule
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Quarterbacks}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{3.09** [4,4015]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{3.76*** [4,4015]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{3.65*** [4,4015]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{3.07** [3,4016]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{3.31** [3,4016]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{3.08** [3,4016]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.91 [3,25605]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.18 [3,25605]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.97 [3,25605]}}\\
+\cellcolor[HTML]{F2F2F2}{Running Backs} & \cellcolor[HTML]{F2F2F2}{0.93 [6,4013]} & \cellcolor[HTML]{F2F2F2}{1.03 [6,4013]} & \cellcolor[HTML]{F2F2F2}{1.04 [6,4013]} & \cellcolor[HTML]{F2F2F2}{1.61 [6,4013]} & \cellcolor[HTML]{F2F2F2}{1.67 [6,4013]} & \cellcolor[HTML]{F2F2F2}{1.62 [6,4013]} & \cellcolor[HTML]{F2F2F2}{1.21 [5,25603]} & \cellcolor[HTML]{F2F2F2}{1.84 [5,25603]} & \cellcolor[HTML]{F2F2F2}{1.70 [5,25603]}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Wide Receivers}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.15 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.31 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.33 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.49 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.52 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.54 [15,4004]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.47 [12,25596]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.45 [12,25596]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.44 [12,25596]}}\\
+\cellcolor[HTML]{F2F2F2}{Tight Ends} & \cellcolor[HTML]{F2F2F2}{2.14* [5,4014]} & \cellcolor[HTML]{F2F2F2}{2.52** [5,4014]} & \cellcolor[HTML]{F2F2F2}{2.53** [5,4014]} & \cellcolor[HTML]{F2F2F2}{1.73 [5,4014]} & \cellcolor[HTML]{F2F2F2}{2.19* [5,4014]} & \cellcolor[HTML]{F2F2F2}{2.17* [5,4014]} & \cellcolor[HTML]{F2F2F2}{0.66 [5,25603]} & \cellcolor[HTML]{F2F2F2}{0.80 [5,25603]} & \cellcolor[HTML]{F2F2F2}{0.55 [5,25603]}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Offensive Line}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.67* [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.84** [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.90** [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.84 [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.89 [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.95 [10,4009]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.50 [10,25598]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.72 [10,25598]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.70 [10,25598]}}\\
+\cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\textbf{Control Variables}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{}}}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Game Situation}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{F2F2F2}{Coach Variables} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Team Stats}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{F2F2F2}{Season/Team FE} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{No} & \cellcolor[HTML]{F2F2F2}{No} & \cellcolor[HTML]{F2F2F2}{No}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Coach FE}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{F2F2F2}{GIMR} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{No} & \cellcolor[HTML]{F2F2F2}{No} & \cellcolor[HTML]{F2F2F2}{No}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Player Presence}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}}\\
+\cellcolor[HTML]{F2F2F2}{Control Def. Players} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes} & \cellcolor[HTML]{F2F2F2}{Yes}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Control Off. Players}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{No}}\\
+\bottomrule
+\multicolumn{10}{l}{\rule{0pt}{1em}\textit{Note: }}\\
+\multicolumn{10}{l}{\rule{0pt}{1em}F-statistics reported with degrees of freedom [df1,df2] and significance levels. Stars indicate significance of joint test for all variables in position group.}\\
+\multicolumn{10}{l}{\rule{0pt}{1em}\textsuperscript{*} * p < 0.10, ** p < 0.05, *** p < 0.01}\\
+\end{tabular}}
+\end{table}
+\begin{table}[!h]
+\centering
+\caption{\label{tab:unnamed-chunk-2}Defense Stops Model Results - Position Groups}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\fontsize{9}{11}\selectfont
+\begin{tabular}[t]{>{\raggedright\arraybackslash}p{3.5cm}ccccccccc}
+\toprule
+\multicolumn{1}{c}{ } & \multicolumn{3}{c}{Starter Models} & \multicolumn{3}{c}{On-Field Models} & \multicolumn{3}{c}{Attempt Models} \\
+\cmidrule(l{3pt}r{3pt}){2-4} \cmidrule(l{3pt}r{3pt}){5-7} \cmidrule(l{3pt}r{3pt}){8-10}
+\textbf{Variable} & \textbf{Starter LPM} & \textbf{Starter Probit} & \textbf{Starter Logit} & \textbf{On-Field LPM} & \textbf{On-Field Probit} & \textbf{On-Field Logit} & \textbf{Attempt LPM} & \textbf{Attempt Probit} & \textbf{Attempt Logit}\\
+\midrule
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Defensive Line}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.35 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.40 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.46 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.50 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.61 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.59 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.05 [8,25600]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.86 [8,25600]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.80 [8,25600]}}\\
+\cellcolor[HTML]{F2F2F2}{Linebackers} & \cellcolor[HTML]{F2F2F2}{0.87 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.91 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.94 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.55 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.58 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.62 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.53 [12,25596]} & \cellcolor[HTML]{F2F2F2}{0.49 [12,25596]} & \cellcolor[HTML]{F2F2F2}{0.55 [12,25596]}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Cornerbacks}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.38*** [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.68*** [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.74*** [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.47 [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.69* [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.77** [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.25 [9,25599]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.15 [9,25599]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.18 [9,25599]}}\\
+\cellcolor[HTML]{F2F2F2}{Safeties} & \cellcolor[HTML]{F2F2F2}{0.68 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.69 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.70 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.65 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.72 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.76 [11,4008]} & \cellcolor[HTML]{F2F2F2}{1.17 [9,25599]} & \cellcolor[HTML]{F2F2F2}{1.05 [9,25599]} & \cellcolor[HTML]{F2F2F2}{1.11 [9,25599]}\\
+\cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{\textbf{Control Variables}}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}}\\
+\cellcolor[HTML]{FAFAFA}{Game Situation} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes}\\
+\cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Coach Variables}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{FAFAFA}{Team Stats} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes}\\
+\cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Season/Team FE}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}}\\
+\cellcolor[HTML]{FAFAFA}{Coach FE} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes}\\
+\cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{GIMR}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}}\\
+\cellcolor[HTML]{FAFAFA}{Player Presence} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No}\\
+\cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Control Off. Players}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{FAFAFA}{Control Def. Players} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No}\\
+\bottomrule
+\multicolumn{10}{l}{\rule{0pt}{1em}\textit{Note: }}\\
+\multicolumn{10}{l}{\rule{0pt}{1em}F-statistics reported with degrees of freedom [df1,df2] and significance levels. Stars indicate significance of joint test for all variables in position group.}\\
+\multicolumn{10}{l}{\rule{0pt}{1em}\textsuperscript{*} * p < 0.10, ** p < 0.05, *** p < 0.01}\\
+\end{tabular}}
+\end{table}
+\begin{table}[!h]
+\centering
+\caption{\label{tab:unnamed-chunk-2}Defense Grades Model Results - Position Groups}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\fontsize{9}{11}\selectfont
+\begin{tabular}[t]{>{\raggedright\arraybackslash}p{3.5cm}ccccccccc}
+\toprule
+\multicolumn{1}{c}{ } & \multicolumn{3}{c}{Starter Models} & \multicolumn{3}{c}{On-Field Models} & \multicolumn{3}{c}{Attempt Models} \\
+\cmidrule(l{3pt}r{3pt}){2-4} \cmidrule(l{3pt}r{3pt}){5-7} \cmidrule(l{3pt}r{3pt}){8-10}
+\textbf{Variable} & \textbf{Starter LPM} & \textbf{Starter Probit} & \textbf{Starter Logit} & \textbf{On-Field LPM} & \textbf{On-Field Probit} & \textbf{On-Field Logit} & \textbf{Attempt LPM} & \textbf{Attempt Probit} & \textbf{Attempt Logit}\\
+\midrule
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Defensive Line}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.52 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.70* [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.70* [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.45 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.55 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.52 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.36 [8,25600]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.43 [8,25600]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.42 [8,25600]}}\\
+\cellcolor[HTML]{F2F2F2}{Linebackers} & \cellcolor[HTML]{F2F2F2}{0.93 [16,4003]} & \cellcolor[HTML]{F2F2F2}{1.07 [16,4003]} & \cellcolor[HTML]{F2F2F2}{1.06 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.70 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.85 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.80 [16,4003]} & \cellcolor[HTML]{F2F2F2}{1.77** [12,25596]} & \cellcolor[HTML]{F2F2F2}{1.97** [12,25596]} & \cellcolor[HTML]{F2F2F2}{2.01** [12,25596]}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Cornerbacks}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{3.40*** [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{3.66*** [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{3.70*** [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.76** [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.68*** [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.88*** [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.59 [9,25599]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.60 [9,25599]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.53 [9,25599]}}\\
+\cellcolor[HTML]{F2F2F2}{Safeties} & \cellcolor[HTML]{F2F2F2}{1.28 [11,4008]} & \cellcolor[HTML]{F2F2F2}{1.41 [11,4008]} & \cellcolor[HTML]{F2F2F2}{1.35 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.23 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.29 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.26 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.60 [9,25599]} & \cellcolor[HTML]{F2F2F2}{0.69 [9,25599]} & \cellcolor[HTML]{F2F2F2}{0.80 [9,25599]}\\
+\cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{\textbf{Control Variables}}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}}\\
+\cellcolor[HTML]{FAFAFA}{Game Situation} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes}\\
+\cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Coach Variables}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{FAFAFA}{Team Stats} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes}\\
+\cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Season/Team FE}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}}\\
+\cellcolor[HTML]{FAFAFA}{Coach FE} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes}\\
+\cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{GIMR}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}}\\
+\cellcolor[HTML]{FAFAFA}{Player Presence} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No}\\
+\cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Control Off. Players}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{FAFAFA}{Control Def. Players} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No}\\
+\bottomrule
+\multicolumn{10}{l}{\rule{0pt}{1em}\textit{Note: }}\\
+\multicolumn{10}{l}{\rule{0pt}{1em}F-statistics reported with degrees of freedom [df1,df2] and significance levels. Stars indicate significance of joint test for all variables in position group.}\\
+\multicolumn{10}{l}{\rule{0pt}{1em}\textsuperscript{*} * p < 0.10, ** p < 0.05, *** p < 0.01}\\
+\end{tabular}}
+\end{table}
+\begin{table}[!h]
+\centering
+\caption{\label{tab:unnamed-chunk-2}Defense Tackles Model Results - Position Groups}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\fontsize{9}{11}\selectfont
+\begin{tabular}[t]{>{\raggedright\arraybackslash}p{3.5cm}ccccccccc}
+\toprule
+\multicolumn{1}{c}{ } & \multicolumn{3}{c}{Starter Models} & \multicolumn{3}{c}{On-Field Models} & \multicolumn{3}{c}{Attempt Models} \\
+\cmidrule(l{3pt}r{3pt}){2-4} \cmidrule(l{3pt}r{3pt}){5-7} \cmidrule(l{3pt}r{3pt}){8-10}
+\textbf{Variable} & \textbf{Starter LPM} & \textbf{Starter Probit} & \textbf{Starter Logit} & \textbf{On-Field LPM} & \textbf{On-Field Probit} & \textbf{On-Field Logit} & \textbf{Attempt LPM} & \textbf{Attempt Probit} & \textbf{Attempt Logit}\\
+\midrule
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Defensive Line}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.41 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.47 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.47 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.34 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.40 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.37 [8,4011]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.16** [8,25600]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.71* [8,25600]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.83* [8,25600]}}\\
+\cellcolor[HTML]{F2F2F2}{Linebackers} & \cellcolor[HTML]{F2F2F2}{0.39 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.36 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.39 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.83 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.97 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.93 [16,4003]} & \cellcolor[HTML]{F2F2F2}{0.39 [12,25596]} & \cellcolor[HTML]{F2F2F2}{0.38 [12,25596]} & \cellcolor[HTML]{F2F2F2}{0.44 [12,25596]}\\
+\cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{Cornerbacks}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.46 [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.67* [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.71* [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{1.77** [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.15** [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{2.20*** [12,4007]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.58 [9,25599]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.58 [9,25599]}} & \cellcolor[HTML]{FAFAFA}{\cellcolor{gray!10}{0.62 [9,25599]}}\\
+\cellcolor[HTML]{F2F2F2}{Safeties} & \cellcolor[HTML]{F2F2F2}{0.28 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.33 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.33 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.35 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.41 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.43 [11,4008]} & \cellcolor[HTML]{F2F2F2}{0.86 [9,25599]} & \cellcolor[HTML]{F2F2F2}{0.78 [9,25599]} & \cellcolor[HTML]{F2F2F2}{0.69 [9,25599]}\\
+\cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{\textbf{Control Variables}}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}} & \cellcolor[HTML]{D3D3D3}{\textbf{\textbf{\cellcolor{gray!10}{}}}}\\
+\cellcolor[HTML]{FAFAFA}{Game Situation} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes}\\
+\cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Coach Variables}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{FAFAFA}{Team Stats} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes}\\
+\cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Season/Team FE}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}}\\
+\cellcolor[HTML]{FAFAFA}{Coach FE} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes}\\
+\cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{GIMR}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{No}}\\
+\cellcolor[HTML]{FAFAFA}{Player Presence} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{Yes} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No}\\
+\cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Control Off. Players}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}} & \cellcolor[HTML]{F2F2F2}{\cellcolor{gray!10}{Yes}}\\
+\cellcolor[HTML]{FAFAFA}{Control Def. Players} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No} & \cellcolor[HTML]{FAFAFA}{No}\\
+\bottomrule
+\multicolumn{10}{l}{\rule{0pt}{1em}\textit{Note: }}\\
+\multicolumn{10}{l}{\rule{0pt}{1em}F-statistics reported with degrees of freedom [df1,df2] and significance levels. Stars indicate significance of joint test for all variables in position group.}\\
+\multicolumn{10}{l}{\rule{0pt}{1em}\textsuperscript{*} * p < 0.10, ** p < 0.05, *** p < 0.01}\\
+\end{tabular}}
+\end{table}
+
+\begin{table}[!h]
+\centering
+\caption{\label{tab:unnamed-chunk-3}Offense Grades Model Comparisons - Starter vs On-Field}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\fontsize{9}{11}\selectfont
+\begin{tabular}[t]{>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}}
+\toprule
+Position & LPM &  & Probit &  & Logit & \\
+\midrule
+\textbf{Quarterbacks} & 0.32 [0.746] & (On-Field > Starter) & 0.37 [0.710] & (On-Field > Starter) & 0.49 [0.622] & (On-Field > Starter)\\
+\textbf{Running Backs} & 0.59 [0.552] & (On-Field > Starter) & 0.60 [0.545] & (On-Field > Starter) & 0.57 [0.571] & (On-Field > Starter)\\
+\textbf{Wide Receivers} & 1.09 [0.276] & (On-Field > Starter) & 1.27 [0.203] & (On-Field > Starter) & 1.28 [0.200] & (On-Field > Starter)\\
+\textbf{Tight Ends} & 0.59 [0.553] & (On-Field > Starter) & 0.66 [0.511] & (On-Field > Starter) & 0.67 [0.501] & (On-Field > Starter)\\
+\textbf{Offensive Line} & 0.61 [0.540] & (Starter > On-Field) & 0.60 [0.551] & (Starter > On-Field) & 0.60 [0.550] & (Starter > On-Field)\\
+\bottomrule
+\multicolumn{7}{l}{\rule{0pt}{1em}\textit{Note: }}\\
+\multicolumn{7}{l}{\rule{0pt}{1em}Z-statistics reported with p-values in brackets. Stars indicate significance level of difference between Starter and On-Field coefficients. Direction indicates which model has larger coefficient values.}\\
+\multicolumn{7}{l}{\rule{0pt}{1em}\textsuperscript{*} * p < 0.10, ** p < 0.05, *** p < 0.01}\\
+\end{tabular}}
+\end{table}
+\begin{table}[!h]
+\centering
+\caption{\label{tab:unnamed-chunk-3}Offense Yards Model Comparisons - Starter vs On-Field}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\fontsize{9}{11}\selectfont
+\begin{tabular}[t]{>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}}
+\toprule
+Position & LPM &  & Probit &  & Logit & \\
+\midrule
+\textbf{Quarterbacks} & 0.64 [0.524] & (On-Field > Starter) & 0.81 [0.418] & (On-Field > Starter) & 0.92 [0.356] & (On-Field > Starter)\\
+\textbf{Running Backs} & 0.79 [0.428] & (On-Field > Starter) & 0.80 [0.426] & (On-Field > Starter) & 0.81 [0.416] & (On-Field > Starter)\\
+\textbf{Wide Receivers} & 0.77 [0.440] & (On-Field > Starter) & 0.86 [0.388] & (On-Field > Starter) & 0.89 [0.372] & (On-Field > Starter)\\
+\textbf{Tight Ends} & 0.82 [0.414] & (On-Field > Starter) & 0.92 [0.359] & (On-Field > Starter) & 0.93 [0.353] & (On-Field > Starter)\\
+\textbf{Offensive Line} & 0.65 [0.513] & (Starter > On-Field) & 0.61 [0.540] & (Starter > On-Field) & 0.62 [0.534] & (Starter > On-Field)\\
+\bottomrule
+\multicolumn{7}{l}{\rule{0pt}{1em}\textit{Note: }}\\
+\multicolumn{7}{l}{\rule{0pt}{1em}Z-statistics reported with p-values in brackets. Stars indicate significance level of difference between Starter and On-Field coefficients. Direction indicates which model has larger coefficient values.}\\
+\multicolumn{7}{l}{\rule{0pt}{1em}\textsuperscript{*} * p < 0.10, ** p < 0.05, *** p < 0.01}\\
+\end{tabular}}
+\end{table}
+\begin{table}[!h]
+\centering
+\caption{\label{tab:unnamed-chunk-3}Offense Completions Model Comparisons - Starter vs On-Field}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\fontsize{9}{11}\selectfont
+\begin{tabular}[t]{>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}}
+\toprule
+Position & LPM &  & Probit &  & Logit & \\
+\midrule
+\textbf{Quarterbacks} & 0.59 [0.552] & (On-Field > Starter) & 0.75 [0.454] & (On-Field > Starter) & 0.87 [0.384] & (On-Field > Starter)\\
+\textbf{Running Backs} & 0.64 [0.525] & (On-Field > Starter) & 0.64 [0.522] & (On-Field > Starter) & 0.68 [0.497] & (On-Field > Starter)\\
+\textbf{Wide Receivers} & 0.85 [0.398] & (On-Field > Starter) & 0.94 [0.347] & (On-Field > Starter) & 0.98 [0.327] & (On-Field > Starter)\\
+\textbf{Tight Ends} & 0.80 [0.422] & (On-Field > Starter) & 0.89 [0.371] & (On-Field > Starter) & 0.91 [0.364] & (On-Field > Starter)\\
+\textbf{Offensive Line} & 0.66 [0.512] & (Starter > On-Field) & 0.61 [0.543] & (Starter > On-Field) & 0.62 [0.535] & (Starter > On-Field)\\
+\bottomrule
+\multicolumn{7}{l}{\rule{0pt}{1em}\textit{Note: }}\\
+\multicolumn{7}{l}{\rule{0pt}{1em}Z-statistics reported with p-values in brackets. Stars indicate significance level of difference between Starter and On-Field coefficients. Direction indicates which model has larger coefficient values.}\\
+\multicolumn{7}{l}{\rule{0pt}{1em}\textsuperscript{*} * p < 0.10, ** p < 0.05, *** p < 0.01}\\
+\end{tabular}}
+\end{table}
+\begin{table}[!h]
+\centering
+\caption{\label{tab:unnamed-chunk-3}Defense Stops Model Comparisons - Starter vs On-Field}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\fontsize{9}{11}\selectfont
+\begin{tabular}[t]{>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}}
+\toprule
+Position & LPM &  & Probit &  & Logit & \\
+\midrule
+\textbf{Defensive Line} & 0.41 [0.683] & (On-Field > Starter) & 0.45 [0.651] & (On-Field > Starter) & 0.41 [0.685] & (On-Field > Starter)\\
+\textbf{Linebackers} & 0.25 [0.806] & (On-Field > Starter) & 0.27 [0.784] & (On-Field > Starter) & 0.28 [0.780] & (On-Field > Starter)\\
+\textbf{Cornerbacks} & 0.27 [0.791] & (On-Field > Starter) & 0.28 [0.780] & (On-Field > Starter) & 0.34 [0.737] & (On-Field > Starter)\\
+\textbf{Safeties} & 0.51 [0.609] & (On-Field > Starter) & 0.57 [0.570] & (On-Field > Starter) & 0.55 [0.580] & (On-Field > Starter)\\
+\bottomrule
+\multicolumn{7}{l}{\rule{0pt}{1em}\textit{Note: }}\\
+\multicolumn{7}{l}{\rule{0pt}{1em}Z-statistics reported with p-values in brackets. Stars indicate significance level of difference between Starter and On-Field coefficients. Direction indicates which model has larger coefficient values.}\\
+\multicolumn{7}{l}{\rule{0pt}{1em}\textsuperscript{*} * p < 0.10, ** p < 0.05, *** p < 0.01}\\
+\end{tabular}}
+\end{table}
+\begin{table}[!h]
+\centering
+\caption{\label{tab:unnamed-chunk-3}Defense Grades Model Comparisons - Starter vs On-Field}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\fontsize{9}{11}\selectfont
+\begin{tabular}[t]{>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}}
+\toprule
+Position & LPM &  & Probit &  & Logit & \\
+\midrule
+\textbf{Defensive Line} & 0.24 [0.812] & (Starter > On-Field) & 0.23 [0.818] & (Starter > On-Field) & 0.25 [0.805] & (Starter > On-Field)\\
+\textbf{Linebackers} & 0.37 [0.713] & (Starter > On-Field) & 0.36 [0.720] & (Starter > On-Field) & 0.39 [0.693] & (Starter > On-Field)\\
+\textbf{Cornerbacks} & 2.24** [0.025] & (Starter > On-Field) & 2.49** [0.013] & (Starter > On-Field) & 2.52** [0.012] & (Starter > On-Field)\\
+\textbf{Safeties} & 0.04 [0.967] & (Starter > On-Field) & 0.06 [0.955] & (Starter > On-Field) & 0.09 [0.930] & (Starter > On-Field)\\
+\bottomrule
+\multicolumn{7}{l}{\rule{0pt}{1em}\textit{Note: }}\\
+\multicolumn{7}{l}{\rule{0pt}{1em}Z-statistics reported with p-values in brackets. Stars indicate significance level of difference between Starter and On-Field coefficients. Direction indicates which model has larger coefficient values.}\\
+\multicolumn{7}{l}{\rule{0pt}{1em}\textsuperscript{*} * p < 0.10, ** p < 0.05, *** p < 0.01}\\
+\end{tabular}}
+\end{table}
+\begin{table}[!h]
+\centering
+\caption{\label{tab:unnamed-chunk-3}Defense Tackles Model Comparisons - Starter vs On-Field}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\fontsize{9}{11}\selectfont
+\begin{tabular}[t]{>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}>{\centering\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}}
+\toprule
+Position & LPM &  & Probit &  & Logit & \\
+\midrule
+\textbf{Defensive Line} & 0.68 [0.496] & (On-Field > Starter) & 0.72 [0.472] & (On-Field > Starter) & 0.67 [0.506] & (On-Field > Starter)\\
+\textbf{Linebackers} & 0.04 [0.964] & (On-Field > Starter) & 0.05 [0.962] & (On-Field > Starter) & 0.04 [0.972] & (On-Field > Starter)\\
+\textbf{Cornerbacks} & 0.18 [0.860] & (On-Field > Starter) & 0.18 [0.855] & (On-Field > Starter) & 0.21 [0.834] & (On-Field > Starter)\\
+\textbf{Safeties} & 0.60 [0.547] & (On-Field > Starter) & 0.65 [0.514] & (On-Field > Starter) & 0.66 [0.508] & (On-Field > Starter)\\
+\bottomrule
+\multicolumn{7}{l}{\rule{0pt}{1em}\textit{Note: }}\\
+\multicolumn{7}{l}{\rule{0pt}{1em}Z-statistics reported with p-values in brackets. Stars indicate significance level of difference between Starter and On-Field coefficients. Direction indicates which model has larger coefficient values.}\\
+\multicolumn{7}{l}{\rule{0pt}{1em}\textsuperscript{*} * p < 0.10, ** p < 0.05, *** p < 0.01}\\
+\end{tabular}}
+\end{table}
+
+\end{document}

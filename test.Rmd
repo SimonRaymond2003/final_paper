@@ -1,0 +1,22 @@
+---
+title: "test"
+output: pdf_document
+date: "2025-04-04"
+---
+
+
+```{r}
+library(data.table)
+offgradestval <- fread("matrices/off_grades_tval.csv")
+```
+
+
+
+
+
+
+
+
+
+
+

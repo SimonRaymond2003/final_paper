@@ -1,0 +1,318 @@
+---
+title: "limited_info"
+output: pdf_document
+date: "2025-04-04"
+---
+
+```{r}
+library(data.table)
+off_grades_outcome <- fread("unstandardized_processed_predict_ccafd_off_grades.csv.csv.gz")
+def_grades_outcome <- fread("unstandardized_processed_predict_ccafd_def_grades.csv.csv.gz")
+library(dplyr)
+select_off_grades_outcome <- fread("unstandardized_processed_predict_ccfd_off_grades.csv.csv.gz")
+select_def_grades_outcome <- fread("unstandardized_processed_predict_ccfd_def_grades.csv.csv.gz")
+```
+
+In our data there is 2 types of 0s. the first is missing id (actually quite rare) the seccond in player not having played/ a recorded grade in the last 12 months. ie rookies/ off injury / first start in a while etc etc
+
+so each position will have a "key measure that if that is 0 then it get binary "limited info" col as 1.
+
+```{r}
+# First, let's examine what columns are actually available for player grades
+# For offense players in def_grades_outcome
+offense_grades_cols <- grep("offense_player_.*_grades", names(def_grades_outcome), value = TRUE)
+
+# For defense players in off_grades_outcome
+defense_grades_cols <- grep("defense_player_.*_defensive_grades", names(off_grades_outcome), value = TRUE)
+# If that pattern doesn't return results, try a more general pattern:
+if(length(defense_grades_cols) == 0) {
+  defense_grades_cols <- grep("defense_player_", names(off_grades_outcome), value = TRUE)
+  # Then filter out the presence columns
+  defense_grades_cols <- defense_grades_cols[!grepl("_present$", defense_grades_cols)]
+}
+
+# Get offense presence columns from off_grades_outcome
+offense_present_cols <- grep("offense_player_.*_present", names(off_grades_outcome), value = TRUE)
+
+# Get defense presence columns from off_grades_outcome (not def_grades_outcome)
+defense_present_cols <- grep("defense_player_.*_present", names(off_grades_outcome), value = TRUE)
+
+# Create the merged dataframe
+merged_data <- off_grades_outcome %>%
+  # Select base ID and presence columns
+  select(my_id, all_of(offense_present_cols), all_of(defense_present_cols)) %>%
+  # Add defense grades from off_grades_outcome
+  left_join(
+    off_grades_outcome %>% select(my_id, all_of(defense_grades_cols)),
+    by = "my_id"
+  ) %>%
+  # Merge with offense grades from def_grades_outcome
+  left_join(
+    def_grades_outcome %>% select(my_id, all_of(offense_grades_cols)),
+    by = "my_id"
+  )
+
+```
+
+
+```{r}
+# First version: my_id, present columns, and regular player grades
+regular_grades_data <- merged_data %>%
+  # Select columns that match the pattern
+  select(
+    my_id,
+    # All present columns
+    matches("_player_[0-9]+_present$"),
+    # Regular offense and defense grades (not starter)
+    matches("(offense|defense)_player_[0-9]+.*grades"),
+    # Exclude starter columns
+    -matches("starter_")
+  )
+
+# Second version: my_id, present columns, and starter player grades
+starter_grades_data <- merged_data %>%
+  select(
+    my_id,
+    # All present columns
+    matches("_player_[0-9]+_present$"),
+    # Only starter grades
+    matches("starter_")
+  )
+```
+
+```{r}
+library(dplyr)
+library(stringr)
+
+# For regular_grades_data
+# First, create a list to store the new columns
+offense_missing_cols <- list()
+defense_missing_cols <- list()
+
+# Process offense player grades
+for (i in 1:24) {
+  player_id <- paste0("player_", i)
+  presence_col <- paste0("offense_", player_id, "_present")
+  
+  if (presence_col %in% colnames(regular_grades_data)) {
+    # Find all grade columns for this player
+    grade_cols <- grep(paste0("offense_", player_id, ".*_grades_"), colnames(regular_grades_data), value = TRUE)
+    
+    if (length(grade_cols) > 0) {
+      # Create new column name
+      missing_col <- paste0("offense_", player_id, "_missing_information")
+      
+      # For each row in the data
+      offense_missing_cols[[missing_col]] <- numeric(nrow(regular_grades_data))
+      
+      for (j in 1:nrow(regular_grades_data)) {
+        # If player is present
+        if (regular_grades_data[[presence_col]][j] == 1) {
+          # If player has grades but they are all 0
+          if (all(sapply(grade_cols, function(col) regular_grades_data[[col]][j] == 0))) {
+            offense_missing_cols[[missing_col]][j] <- 1
+          }
+        }
+      }
+    }
+  }
+}
+
+# Process defense player grades
+for (i in 1:23) {
+  player_id <- paste0("player_", i)
+  presence_col <- paste0("defense_", player_id, "_present")
+  
+  if (presence_col %in% colnames(regular_grades_data)) {
+    # Find all grade columns for this player - more comprehensive pattern
+    grade_cols <- grep(paste0("defense_", player_id, ".*_grades_"), colnames(regular_grades_data), value = TRUE)
+    
+    if (length(grade_cols) > 0) {
+      # Create new column name
+      missing_col <- paste0("defense_", player_id, "_missing_information")
+      
+      # For each row in the data
+      defense_missing_cols[[missing_col]] <- numeric(nrow(regular_grades_data))
+      
+      for (j in 1:nrow(regular_grades_data)) {
+        # If player is present
+        if (regular_grades_data[[presence_col]][j] == 1) {
+          # If player has grades but they are all 0
+          if (all(sapply(grade_cols, function(col) regular_grades_data[[col]][j] == 0))) {
+            defense_missing_cols[[missing_col]][j] <- 1
+          }
+        }
+      }
+    }
+  }
+}
+
+# Add the new columns to the dataset
+regular_grades_data <- bind_cols(regular_grades_data, as_tibble(offense_missing_cols), as_tibble(defense_missing_cols))
+
+# Print which columns were added
+cat("Added offense columns:", names(offense_missing_cols), "\n")
+cat("Added defense columns:", names(defense_missing_cols), "\n")
+
+# Repeat similar process for starter_grades_data
+# First, create a list to store the new columns
+starter_offense_missing_cols <- list()
+starter_defense_missing_cols <- list()
+
+# Process starter offense player grades
+for (i in 1:24) {
+  player_id <- paste0("player_", i)
+  presence_col <- paste0("offense_", player_id, "_present")
+  
+  if (presence_col %in% colnames(starter_grades_data)) {
+    # Find all grade columns for this player - more comprehensive pattern
+    grade_cols <- grep(paste0("starter_offense_", player_id, ".*_grades_"), colnames(starter_grades_data), value = TRUE)
+    
+    if (length(grade_cols) > 0) {
+      # Create new column name
+      missing_col <- paste0("starter_offense_", player_id, "_missing_information")
+      
+      # For each row in the data
+      starter_offense_missing_cols[[missing_col]] <- numeric(nrow(starter_grades_data))
+      
+      for (j in 1:nrow(starter_grades_data)) {
+        # If player is present
+        if (starter_grades_data[[presence_col]][j] == 1) {
+          # If player has grades but they are all 0
+          if (all(sapply(grade_cols, function(col) starter_grades_data[[col]][j] == 0))) {
+            starter_offense_missing_cols[[missing_col]][j] <- 1
+          }
+        }
+      }
+    }
+  }
+}
+
+# Process starter defense player grades
+for (i in 1:23) {
+  player_id <- paste0("player_", i)
+  presence_col <- paste0("defense_", player_id, "_present")
+  
+  if (presence_col %in% colnames(starter_grades_data)) {
+    # Find all grade columns for this player - more comprehensive pattern
+    grade_cols <- grep(paste0("starter_defense_", player_id, ".*_grades_"), colnames(starter_grades_data), value = TRUE)
+    
+    if (length(grade_cols) > 0) {
+      # Create new column name
+      missing_col <- paste0("starter_defense_", player_id, "_missing_information")
+      
+      # For each row in the data
+      starter_defense_missing_cols[[missing_col]] <- numeric(nrow(starter_grades_data))
+      
+      for (j in 1:nrow(starter_grades_data)) {
+        # If player is present
+        if (starter_grades_data[[presence_col]][j] == 1) {
+          # If player has grades but they are all 0
+          if (all(sapply(grade_cols, function(col) starter_grades_data[[col]][j] == 0))) {
+            starter_defense_missing_cols[[missing_col]][j] <- 1
+          }
+        }
+      }
+    }
+  }
+}
+
+# Add the new columns to the dataset
+starter_grades_data <- bind_cols(starter_grades_data, as_tibble(starter_offense_missing_cols), as_tibble(starter_defense_missing_cols))
+
+# Print which columns were added
+cat("Added starter offense columns:", names(starter_offense_missing_cols), "\n")
+cat("Added starter defense columns:", names(starter_defense_missing_cols), "\n")
+
+# Check the structure of the new datasets
+print(paste("Regular grades data now has", ncol(regular_grades_data), "columns"))
+print(paste("Starter grades data now has", ncol(starter_grades_data), "columns"))
+
+# Optional: Check how many missing values were identified
+regular_missing_sum <- sum(sapply(c(offense_missing_cols, defense_missing_cols), sum))
+starter_missing_sum <- sum(sapply(c(starter_offense_missing_cols, starter_defense_missing_cols), sum))
+
+print(paste("Found", regular_missing_sum, "instances of missing information in regular grades data"))
+print(paste("Found", starter_missing_sum, "instances of missing information in starter grades data"))
+```
+
+```{r}
+# Now apply the same analysis for starter running backs
+starter_rb_player_cols <- list()
+
+# Look for starter RB columns with missing information
+for (i in c(4)) {  # Using the same player number as before
+  # Get the missing information column
+  missing_col <- paste0("starter_offense_player_", i, "_missing_information")
+  
+  # Get the presence column (which is the same as regular data)
+  presence_col <- paste0("offense_player_", i, "_present")
+  
+  # Get the grade column(s) - focusing on rushing grades for starter RBs
+  grade_col <- grep(paste0("starter_offense_player_", i, "_rushing_grades"), colnames(starter_grades_data), value = TRUE)
+  
+  # Check if all these columns exist
+  if (missing_col %in% colnames(starter_grades_data) && 
+      presence_col %in% colnames(starter_grades_data) && 
+      length(grade_col) > 0) {
+    
+    # Filter data where:
+    # 1. Player is present (presence_col = 1)
+    # 2. Information is missing (missing_col = 1)
+    starter_rb_missing_data <- starter_grades_data %>%
+      filter(!!sym(presence_col) == 1, !!sym(missing_col) == 1) %>%
+      select(my_id, !!sym(presence_col), !!sym(missing_col), all_of(grade_col))
+    
+    # Store the result
+    starter_rb_player_cols[[paste0("starter_player_", i)]] <- starter_rb_missing_data
+    
+    # Print summary
+    cat("For starter player", i, "(RB):\n")
+    cat("  - Total rows:", nrow(starter_grades_data), "\n")
+    cat("  - Rows where player is present:", sum(starter_grades_data[[presence_col]]), "\n")
+    cat("  - Rows where information is missing:", sum(starter_grades_data[[missing_col]]), "\n")
+    cat("  - Rows where player is present but information is missing:", nrow(starter_rb_missing_data), "\n\n")
+  } else {
+    cat("One or more required columns for starter player", i, "not found\n")
+  }
+}
+
+# Display the first few rows of each starter player's data
+for (player_name in names(starter_rb_player_cols)) {
+  cat("Sample data for", player_name, ":\n")
+  print(head(starter_rb_player_cols[[player_name]]))
+  cat("\n")
+}
+
+# Optional: Compare regular vs starter missing data
+if (length(rb_player_cols) > 0 && length(starter_rb_player_cols) > 0) {
+  cat("Comparison of regular vs starter missing data:\n")
+  cat("  - Regular player 4 missing data rows:", nrow(rb_player_cols[["player_4"]]), "\n")
+  cat("  - Starter player 4 missing data rows:", nrow(starter_rb_player_cols[["starter_player_4"]]), "\n")
+  
+  # Check if they're missing in the same plays/games
+  if (nrow(rb_player_cols[["player_4"]]) > 0 && nrow(starter_rb_player_cols[["starter_player_4"]]) > 0) {
+    common_missing_ids <- intersect(
+      rb_player_cols[["player_4"]]$my_id,
+      starter_rb_player_cols[["starter_player_4"]]$my_id
+    )
+    cat("  - Plays/games missing in both datasets:", length(common_missing_ids), "\n")
+  }
+}
+```
+
+```{r}
+# now f write the starter and regular limited info data to csv but only iwth my id and the limited info columns
+# Select only my_id and the limited info columns
+limited_info_regular <- regular_grades_data %>%
+  select(my_id, contains("missing_information"))
+limited_info_starter <- starter_grades_data %>%
+  select(my_id, contains("missing_information"))
+# Write to CSV files
+write.csv(limited_info_regular, "limited_info_regular.csv", row.names = FALSE)
+write.csv(limited_info_starter, "limited_info_starter.csv", row.names = FALSE)
+
+```
+
+
+for the select ones there are no presence cols we need to fix that!!!

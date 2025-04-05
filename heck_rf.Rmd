@@ -22,7 +22,6 @@ options(max.print=10000)
 ```
 
 ```{r}
-# Column Name Transformer for Football Analytics with individual OL positions
 transform_column_names <- function(df) {
   # Position mapping with individual OL positions
   offense_positions <- c(
@@ -59,6 +58,30 @@ transform_column_names <- function(df) {
   for (i in seq_along(cols)) {
     col <- cols[i]
     
+    # Special handling for missing_information columns
+    if (grepl("_missing_information$", col)) {
+      # Extract player number
+      if (grepl("offense_player_", col)) {
+        player_num <- gsub(".*offense_player_([0-9]+)_missing_information$", "\\1", col)
+        if (player_num %in% names(offense_positions)) {
+          position <- offense_positions[player_num]
+          new_cols[i] <- ifelse(grepl("^starter_", col),
+                               paste0("starter_", position, "_missing_information"),
+                               paste0(position, "_missing_information"))
+        }
+      } else if (grepl("defense_player_", col)) {
+        player_num <- gsub(".*defense_player_([0-9]+)_missing_information$", "\\1", col)
+        if (player_num %in% names(defense_positions)) {
+          position <- defense_positions[player_num]
+          new_cols[i] <- ifelse(grepl("^starter_", col),
+                               paste0("starter_", position, "_missing_information"),
+                               paste0(position, "_missing_information"))
+        }
+      }
+      # Skip the rest of processing for missing_information columns
+      next
+    }
+    
     # Handle offense player patterns
     if (grepl("offense_player_", col)) {
       player_num <- gsub(".*offense_player_([0-9\\-]+).*", "\\1", col)
@@ -66,7 +89,6 @@ transform_column_names <- function(df) {
       # Determine position
       if (grepl("-", player_num)) {
         # Handle OL range notation if present (e.g., "17-21")
-        # Extract the range and assign appropriate OL position
         range_parts <- strsplit(player_num, "-")[[1]]
         if (length(range_parts) == 2) {
           start_num <- as.numeric(range_parts[1])
@@ -100,7 +122,7 @@ transform_column_names <- function(df) {
       }
     }
     
-    # Handle defense player patterns (same as before)
+    # Handle defense player patterns
     else if (grepl("defense_player_", col)) {
       player_num <- gsub(".*defense_player_([0-9]+).*", "\\1", col)
       
@@ -201,65 +223,84 @@ select_data[, GIMR := GIMR]
   outcome_data_player <- copy(outcome_data)
   outcome_data_starter <- copy(outcome_data)
   
-# Clean data for both models
 for (dt in list(outcome_data_player, outcome_data_starter)) {
   dt[, my_id := NULL]
   dt[, yardline_31_40 := NULL]
   dt[, year2022_team_CLE := NULL]
-
+  
   # Remove attendance variables
   dt[, attendance_pct := NULL]
   dt[, attendance_raw := NULL]
-
-  # Identify columns with "_present" in the name
-  present_cols <- grep("_present", names(dt), value = TRUE)
   
-  # First, remove columns that are entirely 1 or entirely 0
-  for (col in present_cols) {
-    # Check if column is entirely 1 or entirely 0
-    if (all(dt[[col]] == 1) || all(dt[[col]] == 0)) {
-      dt[, (col) := NULL]
-      # Remove from the list of present columns
-      present_cols <- setdiff(present_cols, col)
+  # Define positions to keep - use the same for both present and missing_information
+  positions_to_keep <- c(
+    # Offense
+    "QB",              # QB
+    "WR1", "WR2", "WR3",   # WR1, WR2, WR3
+    "RB",               # RB 
+    # dont keep OL due to multicolinearity
+    # Defense
+    "LB1", "LB2", "LB3", "LB4",   # LB1 to LB4
+    "CB1", "CB2", "CB3",         # CB1, CB2, CB3
+    "S1", "S2"                   # S1, S2
+  )
+  
+  # Create patterns for present columns
+  present_pattern <- paste0("(", paste(paste0(positions_to_keep, "_present$"), collapse = "|"), ")")
+  
+  # Create patterns for missing_information columns
+  missing_info_pattern <- paste0("(", paste(paste0(positions_to_keep, "_missing_information$"), collapse = "|"), ")")
+  
+  # Find all present columns
+  present_cols <- grep("_present$", names(dt), value = TRUE)
+  
+  # Find all missing_information columns
+  missing_info_cols <- grep("_missing_information$", names(dt), value = TRUE)
+  
+  # Remove columns with zero variance (all 1s or all 0s)
+  all_cols <- names(dt)
+  for (col in all_cols) {
+    # Check if the column exists (might have been removed in a previous step)
+    if (col %in% names(dt)) {
+      # If column is numeric and has zero variance
+      if (is.numeric(dt[[col]]) && var(dt[[col]], na.rm = TRUE) == 0) {
+        dt[, (col) := NULL]
+        # Also remove from present_cols and missing_info_cols if they exist there
+        present_cols <- setdiff(present_cols, col)
+        missing_info_cols <- setdiff(missing_info_cols, col)
+      }
     }
   }
   
-  # Create patterns for positions to keep
-  positions_to_keep <- c(
-    # Offense
-    "QB_present$",              # QB
-    "WR[1-3]_present$",             # WR1, WR2, WR3
-    "RB1*_present$",                # RB (with or without 1)
-   # dont keep OL due to multicolinearity
-    # Defense
-    "DL[2-4]_present$",             # DL2, DL3, DL4
-    "LB[3-4]_present$",              # LB3, LB4
-    "CB[1-3]_present$",             # CB1, CB2, CB3
-    "S[1-2]_present$"                # S1, S2
-  )
+  # Find columns to keep
+  present_cols_to_keep <- grep(present_pattern, present_cols, value = TRUE)
+  missing_info_cols_to_keep <- grep(missing_info_pattern, missing_info_cols, value = TRUE)
   
-  # Create a single pattern to match all positions to keep
-  keep_pattern <- paste0("(", paste(positions_to_keep, collapse = "|"), ")")
+  # Find columns to remove
+  present_cols_to_remove <- setdiff(present_cols, present_cols_to_keep)
+  missing_info_cols_to_remove <- setdiff(missing_info_cols, missing_info_cols_to_keep)
   
-  # Find columns to keep based on the pattern
-  cols_to_keep <- grep(keep_pattern, present_cols, value = TRUE)
-  
-  # Find all present columns to remove (those not matched by our pattern)
-  cols_to_remove <- setdiff(present_cols, cols_to_keep)
-  
-  # Remove the unwanted present columns
-  if (length(cols_to_remove) > 0) {
-    dt[, (cols_to_remove) := NULL]
+  # Remove unwanted columns
+  if (length(present_cols_to_remove) > 0) {
+    dt[, (present_cols_to_remove) := NULL]
   }
   
-  # For outcome_data_starter, duplicate non-starter _present columns with starter_ prefix
+  if (length(missing_info_cols_to_remove) > 0) {
+    dt[, (missing_info_cols_to_remove) := NULL]
+  }
+  
+  # For outcome_data_starter, duplicate non-starter columns with starter_ prefix
   if (identical(dt, outcome_data_starter)) {
-    # Find all _present columns that don't already have starter_ prefix
+    # Handle present columns
     present_cols_no_prefix <- grep("_present$", names(dt), value = TRUE) 
     present_cols_no_prefix <- present_cols_no_prefix[!grepl("^starter_", present_cols_no_prefix)]
     
-    # Add duplicates with starter_ prefix
-    for (col in present_cols_no_prefix) {
+    # Handle missing_information columns
+    missing_info_cols_no_prefix <- grep("_missing_information$", names(dt), value = TRUE)
+    missing_info_cols_no_prefix <- missing_info_cols_no_prefix[!grepl("^starter_", missing_info_cols_no_prefix)]
+    
+    # Add duplicates with starter_ prefix for both types
+    for (col in c(present_cols_no_prefix, missing_info_cols_no_prefix)) {
       new_col <- paste0("starter_", col)
       dt[, (new_col) := dt[[col]]]
     }
