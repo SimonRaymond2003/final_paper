@@ -453,10 +453,14 @@ for (dataset_idx in 1:length(dataset_names)) {
       control_vals[season_idx + 1] <- "No"
     }
     
-    # Special case for Coach FE in Player and Starter models
-    if (grepl("Player|Starter", col_name) && "Coach FE" %in% control_categories) {
+    # Set Coach FE to No for onfield and starter models, Yes for attempt models
+    if ("Coach FE" %in% control_categories) {
       coach_idx <- which(control_categories == "Coach FE")
-      control_vals[coach_idx + 1] <- "No"
+      if (grepl("On-Field|Starter", col_name)) {
+        control_vals[coach_idx + 1] <- "No"
+      } else if (grepl("Attempt", col_name)) {
+        control_vals[coach_idx + 1] <- "Yes"
+      }
     }
     
     # Handle Player Presence control

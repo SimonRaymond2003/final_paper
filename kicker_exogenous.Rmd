@@ -95,7 +95,7 @@ for(d in 1:length(ctd1_datasets)) {
     coach = TRUE,
     team_stats = TRUE,
     player_vars = TRUE,
-    player_presence = TRUE, 
+    player_presence = FALSE, 
     team_fe = TRUE,
     coach_fe = FALSE
   )
@@ -354,7 +354,7 @@ analyze_yardline <- function(dt, yardline_var) {
       player_vars = has_player_vars,
       team_fe = has_team_fe,
       coach_fe = has_coach_fe,
-      player_presence = TRUE # Explicitly set player_presence
+      player_presence = FALSE # Explicitly set player_presence to No
     )
     
     return(results)
@@ -452,7 +452,7 @@ for (d in 1:length(ctd1_datasets)) {
           #       paste(missing_controls, collapse=", ")))
           for (ctrl in missing_controls) {
             # Default missing controls to FALSE except player_presence (TRUE)
-            result$controls[[ctrl]] <- if(ctrl == "player_presence") TRUE else FALSE
+            result$controls[[ctrl]] <- if(ctrl == "player_presence") FALSE else FALSE
           }
         }
         
@@ -605,7 +605,7 @@ create_dataset_table <- function(dataset_index) {
       df[9, yardline] <- if(dataset_controls$coach) "Yes" else "Yes"
       df[10, yardline] <- if(dataset_controls$team_stats) "Yes" else "Yes"
       df[11, yardline] <- if(dataset_controls$player_vars) "Yes" else "Yes"
-      df[12, yardline] <- if(dataset_controls$player_presence) "Yes" else "Yes"
+      df[12, yardline] <- if(dataset_controls$player_presence) "No" else "No"
       df[13, yardline] <- if(dataset_controls$team_fe) "Yes" else "Yes"
       df[14, yardline] <- if(dataset_controls$coach_fe) "Yes" else "No"
       
@@ -619,7 +619,7 @@ create_dataset_table <- function(dataset_index) {
       df[9, yardline] <- "Yes"
       df[10, yardline] <- "Yes"
       df[11, yardline] <- "Yes"
-      df[12, yardline] <- "Yes"  # Default player_presence to Yes
+      df[12, yardline] <- "No"  # Default player_presence to No
       df[13, yardline] <- "No"
       df[14, yardline] <- "No"
       df[15, yardline] <- "---"

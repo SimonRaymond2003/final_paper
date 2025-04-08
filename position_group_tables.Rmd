@@ -210,7 +210,10 @@ calculate_joint_test <- function(mfx_matrix, tval_matrix, variables, col_name) {
     
     return(format_joint_test(as.numeric(f_stat), df1, df2))
   }, error = function(e) {
-    return(list(f_stat = "NA", df = "[NA,NA]"))
+    return(list(
+      f_stat = "NA",
+      df = "[NA,NA]"
+    ))
   })
 }
 
@@ -495,7 +498,7 @@ for (col_name in names(table_data)[-1]) {
   }
   
   # Special case for Coach FE in Player and Starter models
-  if (grepl("Starter", col_name) && "Coach FE" %in% control_categories) {
+  if ((grepl("Starter|On-Field", col_name)) && "Coach FE" %in% control_categories) {
     coach_idx <- which(control_categories == "Coach FE")
     control_vals[coach_idx + 1] <- "No"
   }
@@ -563,12 +566,12 @@ control_header_idx <- nrow(joint_test_data) + 1
     add_header_above(c(" " = 1, "Starter Models" = 3, "On-Field Models" = 3, "Attempt Models" = 3)) %>%
     column_spec(1, width = "3.5cm")
   
-  # Apply alternating colors to all rows in position groups section (matching control variables colors)
+  # Apply alternating colors to all rows in position groups section (subtle academic striping)
   for (i in 1:(control_header_idx - 1)) {
     if (i %% 2 == 1) {
-      latex_table <- latex_table %>% row_spec(i, background = "#FAFAFA")
+      latex_table <- latex_table %>% row_spec(i, background = "#F8F8F8")
     } else {
-      latex_table <- latex_table %>% row_spec(i, background = "#F2F2F2")
+      latex_table <- latex_table %>% row_spec(i, background = "#FFFFFF")
     }
   }
   
@@ -590,9 +593,9 @@ control_header_idx <- nrow(joint_test_data) + 1
     row_idx <- control_var_rows[i]
     
     if (i %% 2 == 1) {
-      latex_table <- latex_table %>% row_spec(row_idx, background = "#FAFAFA")
+      latex_table <- latex_table %>% row_spec(row_idx, background = "#F8F8F8")
     } else {
-      latex_table <- latex_table %>% row_spec(row_idx, background = "#F2F2F2")
+      latex_table <- latex_table %>% row_spec(row_idx, background = "#FFFFFF")
     }
   }
   
@@ -741,12 +744,13 @@ for (dataset_idx in 1:length(dataset_names)) {
                       align = c('l', 'c', 'l', 'c', 'l', 'c', 'l'),
                       caption = paste(dataset_name, "Model Comparisons - Starter vs On-Field"),
                       escape = FALSE) %>%
-    kable_styling(latex_options = c("scale_down", "hold_position"),
+    kable_styling(latex_options = c("scale_down", "hold_position", "striped"),
                  font_size = 9,
                  full_width = FALSE) %>%
     column_spec(1, width = "3cm") %>%
     column_spec(c(2,4,6), width = "2.5cm") %>%
     column_spec(c(3,5,7), width = "3cm") %>%
+    row_spec(seq(1, nrow(comparison_data), by = 2), background = "#F8F8F8") %>%
     footnote(
       symbol = c("* p < 0.10, ** p < 0.05, *** p < 0.01"),
       general = paste("Z-statistics reported with p-values in brackets.",

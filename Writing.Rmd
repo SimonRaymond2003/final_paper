@@ -24,9 +24,9 @@ In American Football many teams have shifted to being more aggresive on fourth d
 
 ## Research Problem and Key Findings
 
-A result like this causes one ask the question “Did the Lions make the right call?”. This question seems to be getting answered as “yes” by the current literature. However, we need to know if different teams should "go-for-it" or not "go-for-it" depending on their situation and team make up. For example, it could be argued that the lions should have attempted the crucial fourth down in the 2023-24 playoff divisional round game. However, if the Panthers (which were a significantly worse team) were is that situation it could be argued that they should not have been as aggressive. This is because the panthers could have had a worse chance of being able to convert on fourth down.
+A result like this causes one ask the question “Did the Lions make the right call?”. This question seems to be getting answered as “yes” by the current literature. However, we need to know if different teams should "go-for-it" or not "go-for-it" depending on their situation and team make up. For example, it could be argued that the lions should have attempted the crucial fourth down in the 2023-24 playoff divisional round game. However, if the Panthers (which were a significantly worse team) were is that situation it could again be argued that they should not have been as aggressive. This is because the panthers could have had a worse chance of being able to convert on fourth down due to a lack in player quality.
 
-On top of this, we must be weary of any recommendation that is given to a head coach. The truth is that we are not on the field, in the locker rooms, or in team meeting. This means coaches may know more then us in certain game time decision. We must approach this topic with the idea of being more practical and clear to coaches. If we are simply pointing our algorithms and giving black-box predictions we lose all credibility as one would be oblivous to the true depth of decision making in the NFL.
+We must be weary of any recommendation that is given to a head coach. The truth is that we are not on the field, in the locker rooms, or in team meeting. This means coaches may know more then us in certain game time decision. We must approach this topic with the idea of being more practical and clear to coaches. If we are simply pointing our algorithms and giving black-box predictions we lose all credibility as one would be oblivous to the true depth of decision making in the NFL.
 
 In our analysis we discover via our Generalized Inverse Mills Ratio that coaches are able to factor in variables that are unseen in our data in the decision making process on 4th downs. Coaches also show signs of being able to properly evaluate the performance of players in fourth down situations. However, certain archetypes of quarterback are not being properly evaluated by coaches and factored into decision making by coaches.
 
@@ -61,7 +61,7 @@ A gap in the current research is caused by the lack in quality data. Currently w
 
 Our data was pulled from two main sources. 
 
-As a base the nflverse package provided in R gave us play by play data for the years of 2017 to 2023. This includes basic game information and the IDs of players that participated each play. The reason for our cutoff of 2017 is due to the NFL only putting tracking chips in players jerseys as of the 2016 season. The 2016 season however still had many inconsistencies which leads us to drop the year. 
+As a base the nflverse package provided in R gave us play-by-play data for the years of 2017 to 2023. This includes basic game information and the IDs of players that participated each play. The reason for our cutoff of 2017 is due to the NFL only putting tracking chips in players jerseys as of the 2016 season. The 2016 season however still had many inconsistencies which leads us to drop the year. 
 
 The key part then is the merging of Pro Football Focus's aggregated weekly data. The statistics are downloaded as premium player reports on a weekly bases and then aggregated to time lengths of 2 weeks, 12 weeks and 3 years. These time length have been arbitrarly picked which leaves room for future research. It was found that the 12 week time frame better captured the significance and value of players. This is due to the 2 week timeframe struggling with noise while the 3 year timeframe is not sensitive enough to emerging or aging players.
 
@@ -70,14 +70,18 @@ Players from the PFF data set where merged into our base play by play data set b
 As a final note attendance data was also scrapped from Pro Football Reference. This data was then merged into our base data set to allow for the control of fan attendance in our models.
 
 
-```{r off-p-sum, fig.cap="Key Data Summary", out.width="100%"}
-knitr::include_graphics("table_images/sum1.png")
+```{=latex}
+\begin{table}[ht]
+\centering
+\caption{Key Data Summary}
+\includegraphics[width=\textwidth]{table_images/sum1.png}
+\end{table}
 ```
 
 
 ## Variable Selection
 
-Our variables that we work with fall into one of two categories. They are either statistics about players or about the situation of the play. The player variables consist of variables that describe who was on the field. We also have access to player variables of the starting players on each team based on depth chart data provided by nflverse. In both situations the players are sorted into columns based on depth chart position. For example, the starting QB is also in the offense_player_1 slot to allow us to maintain consistancy. Obvously our attempt models are forced to only use the starter player statistics as we cannot use the players on the field to predict the type of player that was called.
+Our variables that we work with fall into one of two categories. They are either statistics about players or about the situation of the play. The player variables consist of variables that describe who was on the field. We also have access to player variables of the starting players on each team based on depth chart data provided by nflverse. In both situations the players are sorted into columns based on depth chart position. For example, the starting QB is also in the offense_player_1 slot to allow us to maintain consistency. Obviously our attempt models are forced to only use the starter player statistics as we cannot use the players on the field to predict the type of play that was called.
 
 # Methodology
 
@@ -87,16 +91,19 @@ The following models include several categories of control variables: *Game Situ
 
 Tools that have both predictive and causal traits are being employed.
 
-In our data we often had 20,000+ different player variables. This clearly is a situation where predictive tools such as Random Forest and XGBoosting thrive. In the use of XGBoosting we first use boostrapping to tune for optimal hyperparameters. Seccond we will run the tuned model on 1000 train/test bootstrapped splits of data to report the AUC. This process will be done when predicting attempts and conversion.
+### Predictive Models
+
+After filtering out column with too many NA Values (at a threshold of 20 %) we maintain 35,000+ different player variables. This clearly is a situation where predictive tools such as Random Forest and XGBoosting thrive. In the use of XGBoost we first use boostrapping to tune for optimal hyperparameters. Seccond we will run the tuned model on 1000 train/test bootstrapped splits of data to report the Area Under the Recieving Operator Curve. This process will be done when predicting attempts and conversion.
 
 Similarly we can enact Random Forest to receive a OOB AUC. Random Forest will also let us receive insight into what variables have high importance in predictions based on MDA and MDI. This ranking of variables not only allows us to feature select for XGBoosting but it also assisted in watching what variables could be considered for causal analysis.
 
+### Causal Models
+
 For the causal analysis we will be employing the a form of the Heckman correction. This is due to the selection bais in fourth downs. Since not all fourth downs are attempted, we do not have data on the fourth downs that never happened. We look to deal with this bias by using a evolved verison of Heckman's original model. In the original paper it was proposed to use a two step process. In the selection step one would predict the probability of being selected while including a variable that is exogenous to the actual outcome that we are interested in. This estimated probability is then converted into the IMR and used to control for selection bias in the outcome step. This process however assumes linear relationships in the selection stage.
 
-In our case we are in fact not dealing with linear relationships in the selection stage. This is discovered by how we have a increase of almost 20 %pts in AUC when predicting attempts with a XGBoost model instead of a linear model. Therefore our first step in correcting selection bias looks to predict the probability of a attempt of a fourth down. This prediction then is converted into a Generalized IMR that is not bound to the assumptions of a IMR. We then place our GIMR in our outcome equation when estimating the conversion of a fourth down to control for selection bias. 
+In our case we are in fact not dealing with linear relationships in the selection stage. This is discovered by how we have a increase of almost 20 %pts in AUC when predicting attempts with a XGBoost model instead of a linear model. Therefore our first step in correcting selection bias looks to predict the probability of a attempt of a fourth down. This prediction then is converted into a Generalized Inverse Mills Ratio that is not bound to the classical assumptions of Heckman's original IMR. We then place our GIMR in our outcome equation when estimating the conversion of a fourth down to control for selection bias. 
 
 ## Framework
-
 
 ### Selection Model
 
@@ -194,8 +201,12 @@ Models are estimated separately for offensive outcomes (grades, yards, completio
   
   When the kicker is not on the field during a fourth down they are unable to effect the decision making of the coaches or plays of the coaches, as there are no further decisions to be made. In a Third down situation we find that kicker grades do have positive significance on the conversion of a third down. This significance, is soley found in the middle of the field, where the kicker is more likely to be used if the third down is not converted. In the situations on third down that would mirror a fourth down, there is no statistical significance. When the kicker is not apart of the decision making process on third down, similarly to fourth down, it does not have a effect on 3rd down conversion. 
   
-```{r kicker-grades, fig.cap="Kicker Offensive Grades", out.width="100%"}
-knitr::include_graphics("table_images/kick1.png")
+```{=latex}
+\begin{table}[ht]
+\centering
+\caption{Kicker Offensive Grades}
+\includegraphics[width=\textwidth]{table_images/kick1.png}
+\end{table}
 ```
 
 This significance of the kicker and punter grades in key area of the field is due to the coaches being able to properly adjust their decision making for whether or not to attempt a fourth down. This is to say that coaches are properly recognizing how good or bad both their punters and kicker are and making adjustments on their playcalling. 
@@ -227,97 +238,120 @@ To evaluate a coaches' decision making, the Attempt Models are able to show if a
 
 \newpage
 
-### Individual Player Offensive Grades Model Results
+### Offensive Player Grades Model Results
 
-```{r offense-grades-table, fig.cap="Offense Grades Table", out.width="100%"}
-knitr::include_graphics("table_images/off1.png")
+The following tables displays the results of the Offensive Player Grades Models across LPM, probit and logit models.  
+
+```{=latex}
+\begin{table}[ht]
+\centering
+\caption{Offense Grades Table}
+\includegraphics[width=\textwidth]{table_images/off1.png}
+\end{table}
+```
+
+It is found that the effect of a on-field quarterback recieving positivly significant Marginal Effect across all model types. This key finding exemplifies how quarterbacks that excel in passing the ball on quicker routes actually preform better on fourth downs. Contrary to this there are no signs of a starting quarterbacks grades being significant in the decision making of coaches on if to attempt a fourth down. This is to say that the coaches fail to properly factor in the specific archetype of quarterback that their team possesses. While the strength of significance with the starter versions of the models is vry week, the following table 4 cannot find a statistically significantdifference between the marginal effects of the on-field and starter short passing grades for quarterbacks. 
+
+Similarly we see the Tight End 1 slot shows significance at a p value of 0.05 in both on-field and starter models in terms of their pass blocking grades. The further lack of any positive significance in terms of a Tight End's pass catching grades tells us that a tight end's ability to block is more important then their ability to catch the ball in fourth down situations. Similarly to Quarterbacks, the coaches fail to properly factor in the specific archetype of tight end that their team possesses as there is a lack of significance within attempt models..
+
+```{=latex}
+\begin{table}[ht]
+\centering
+\caption{Offense Grades Differences Table}
+\includegraphics[width=\textwidth]{table_images/off1.5.png}
+\end{table}
+```
+
+```{=latex}
+\begin{table}[ht]
+\centering
+\caption{Offense Grades Model Results}
+\includegraphics[width=\textwidth]{table_images/off2.png}
+\end{table}
+```
+
+```{=latex}
+\begin{table}[ht]
+\centering
+\caption{Offense Player Grades Joint Significance Differences Table}
+\includegraphics[width=\textwidth]{table_images/off2.5.png}
+\end{table}
+```
+
+```{=latex}
+\begin{table}[ht]
+\centering
+\caption{Joint Significance Offense}
+\includegraphics[width=\textwidth]{table_images/off3.png}
+\end{table}
+```
+
+```{=latex}
+\begin{table}[ht]
+\centering
+\caption{Offense Grades Joint Significance Differences Table}
+\includegraphics[width=\textwidth]{table_images/off3.5.png}
+\end{table}
 ```
 
 \newpage 
 
-### Individual Player Defensive Grades Model Results
+### Defensive Player Grades Model Results
 
-```{r defense-grades-table, fig.cap="Defense Grades Table", out.width="100%"}
-knitr::include_graphics("table_images/def1.png")
+```{=latex}
+\begin{table}[ht]
+\centering
+\caption{Defense Grades Table}
+\includegraphics[width=\textwidth]{table_images/def1.png}
+\end{table}
 ```
 
-\newpage 
-
-### Offensive Player Joint Significance Results
-
-```{r offense-grades-model, fig.cap="Offense Grades Model Results", out.width="100%"}
-knitr::include_graphics("table_images/off2.png")
+```{=latex}
+\begin{table}[ht]
+\centering
+\caption{Defense Grades Differences Table}
+\includegraphics[width=\textwidth]{table_images/def1.5.png}
+\end{table}
 ```
 
-### Defensive Player Joint Significance Results 
-
-```{r defense-grades-model, fig.cap="Defense Grades Model Results by Position Groups", out.width="100%"}
-knitr::include_graphics("table_images/def2.png")
+```{=latex}
+\begin{table}[ht]
+\centering
+\caption{Defense Grades Model Results by Position Groups}
+\includegraphics[width=\textwidth]{table_images/def2.png}
+\end{table}
 ```
 
-\newpage 
-
-### Offense Joint Significance Results
-
-```{r off3, fig.cap="Joint Significance Offense", out.width="100%"}
-knitr::include_graphics("table_images/off3.png")
+```{=latex}
+\begin{table}[ht]
+\centering
+\caption{Defense Player Grades Joint Significance Differences Table}
+\includegraphics[width=\textwidth]{table_images/def2.5.png}
+\end{table}
 ```
 
+```{=latex}
+\begin{table}[ht]
+\centering
+\caption{Joint Significance Defense}
+\includegraphics[width=\textwidth]{table_images/def3.png}
+\end{table}
+```
 
-### Defense Joint Significance Results
-
-```{r def3, fig.cap="Joint Significance Defense", out.width="100%"}
-knitr::include_graphics("table_images/def3.png")
+```{=latex}
+\begin{table}[ht]
+\centering
+\caption{Defense Grades Joint Significance Differences Table}
+\includegraphics[width=\textwidth]{table_images/def3.5.png}
+\end{table}
 ```
 
 \newpage
-
-### Differences in Model Coeficients
-
-```{r offense-grades-table-diffs, fig.cap="Offense Grades Differences Table", out.width="100%"}
-knitr::include_graphics("table_images/off1.5.png")
-```
-
-\newpage
-
-```{r defense-grades-table-diffs, fig.cap="Defense Grades Differences Table", out.width="100%"}
-knitr::include_graphics("table_images/def1.5.png")
-```
-
-\newpage
-
-```{r offense-grades-table-diffs2, fig.cap="Offense Player Grades Joint Significance Differences Table", out.width="100%"}
-knitr::include_graphics("table_images/off2.5.png")
-```
-
-```{r defense-grades-table-diffs2, fig.cap="Defense Player Grades Joint Significance Differences Table", out.width="100%"}
-knitr::include_graphics("table_images/def2.5.png")
-```
-
-```{r offense-grades-table-diffs3, fig.cap="Offense Grades Joint Significance Differences Table", out.width="100%"}
-knitr::include_graphics("table_images/off3.5.png")
-```
-
-```{r defense-grades-table-diffs3, fig.cap="Defense Grades Joint Significance Differences Table", out.width="100%"}
-knitr::include_graphics("table_images/def3.5.png")
-```
 
 ## Discusion
 
 The interpretation of Starter and On-Field Models leads us to ask why there is a difference in quality of statistical significance. In our F-Statistic tables Starter Models appear to capture the performance of positions and teams better. Individual player features also seem to measure player performance better as show by a larger amount of significant variables. This leads us to believe that Starter Models have less noise in measurement then On-Field Models due to a higher consistency of players. On-field measurements are subject to players being subbed in and out of the game. While it provides greater detail in measurement it makes player slots have more variance in terms of which players are present where. For example the LB 2 of a team can be slotted into either LB slot 1 or 2 depending on the availability of the LB 1 in a On-Field play. However for a given game that LB 2 player will stay in the second slot for the entire game. 
 
-
-Quarterbacks have been undoubtedly held as the most important player on the field. Signs of joint significance are found across Starter, On-Field and Attempt models. On-Field models show clear significance while the Attempt model also shows signs of statistical significance. 
-
-For individual Quarterback Feature importance we find that the Quarterbacks performance on short passes is significant. Since this is held across all models it shows us that coaches are able to properly evaluate the performance of a quarterback in a fourth down situation. However, one difference is found with the On-Field deep passing grades. The negative significance suggests that quarterbacks that are better at deep passing are less likely to be effective on a fourth down. Coaches are not picking up on this feature as there is no negative significance in the Attempt Models.
-
-One big case of coaches misevaluating a player is found by how a Tight Ends pass blocking grades is consitantly significant across On-Field and Starter Models. However in our Attempts model we find no such significance. 
-
-Coaches are including wide receivers in the decision making process as seen by their joint significance in the Attempt Models. However, there is a struggle to find consistant significance in the individual models especially with the On-Field and Starter models.
-
-What is the most interesting is that the Grades of the team's running back are not found to be significant in any model. This is the case even despite how fourth downs often are run plays due to the amount of short yardage situations.
-
-In terms of the defense there is not enough evidence to make statements about individual player features' significance. However, when we test for joint significance of the defensive players there is signs of significance with the Defensive Line and Cornerbacks. Coaches then only produce weakly significant linear results with their attempt model for Cornerbacks. The decision to attempt a fourth down is seen to completely overlook the quality of a teams Starting linebacker core.
 
 \newpage
 

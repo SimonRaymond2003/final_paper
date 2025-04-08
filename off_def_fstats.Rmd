@@ -234,7 +234,10 @@ calculate_joint_test <- function(mfx_matrix, tval_matrix, variables, col_name, d
     
     return(format_joint_test(as.numeric(f_stat), df1, df2))
   }, error = function(e) {
-    return(list(f_stat = "NA", df = "[NA,NA]"))
+    return(list(
+      f_stat = "NA",
+      df = "[NA,NA]"
+    ))
   })
 }
 
@@ -438,8 +441,8 @@ create_control_variables <- function(is_offense) {
       control_vals[season_idx + 1] <- "No"
     }
     
-    # Special case for Coach FE in Starter models
-    if (grepl("Starter", col) && "Coach FE" %in% control_categories) {
+    # Special case for Coach FE in Starter and On-Field models
+    if ((grepl("Starter", col) || grepl("On-Field", col)) && "Coach FE" %in% control_categories) {
       coach_idx <- which(control_categories == "Coach FE")
       control_vals[coach_idx + 1] <- "No"
     }
@@ -636,21 +639,17 @@ print_comparison_table <- function(table_data, caption) {
         format = "latex",
         booktabs = TRUE,
         col.names = c("Dataset", "LPM", "", "Probit", "", "Logit", ""),
-        align = c('l', 'c', 'l', 'c', 'l', 'c', 'l'),
+        align = c('l', 'r', 'l', 'r', 'l', 'r', 'l'),
         caption = caption,
         escape = FALSE) %>%
-    kable_styling(latex_options = c("scale_down", "hold_position"),
-                 font_size = 9,
+    kable_styling(latex_options = c("scale_down", "hold_position", "striped"),
+                 font_size = 10,
                  full_width = FALSE) %>%
-    column_spec(1, width = "3cm") %>%
-    column_spec(c(2,4,6), width = "2.5cm") %>%
-    column_spec(c(3,5,7), width = "3cm") %>%
+    column_spec(1, width = "3.5cm") %>%
+    column_spec(c(2,4,6), width = "2.8cm") %>%
+    column_spec(c(3,5,7), width = "3.2cm") %>%
     footnote(
-      symbol = c("* p < 0.10, ** p < 0.05, *** p < 0.01"),
-      general = paste("Z-statistics reported with p-values in brackets.",
-                     "Stars indicate significance level of difference between Starter and On-Field coefficients.",
-                     "Direction indicates which model has larger coefficient values.",
-                     "Tests performed on average coefficients across all position variables combined.")
+      general = paste("Stars indicate significance level of difference between Starter and On-Field coefficients.", "* p < 0.10, ** p < 0.05, *** p < 0.01", sep = " ")
     )
 }
 
