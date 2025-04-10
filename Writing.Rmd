@@ -6,6 +6,7 @@ output:
     toc: true
     toc_depth: 3
     number_sections: true
+    extra_dependencies: ["float", "placeins"]
 ---
 
 ```{r setup, include=FALSE}
@@ -71,7 +72,7 @@ As a final note attendance data was also scrapped from Pro Football Reference. T
 
 
 ```{=latex}
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Key Data Summary}
 \includegraphics[width=\textwidth]{table_images/sum1.png}
@@ -202,7 +203,7 @@ Models are estimated separately for offensive outcomes (grades, yards, completio
   When the kicker is not on the field during a fourth down they are unable to effect the decision making of the coaches or plays of the coaches, as there are no further decisions to be made. In a Third down situation we find that kicker grades do have positive significance on the conversion of a third down. This significance, is soley found in the middle of the field, where the kicker is more likely to be used if the third down is not converted. In the situations on third down that would mirror a fourth down, there is no statistical significance. When the kicker is not apart of the decision making process on third down, similarly to fourth down, it does not have a effect on 3rd down conversion. 
   
 ```{=latex}
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Kicker Offensive Grades}
 \includegraphics[width=\textwidth]{table_images/kick1.png}
@@ -236,14 +237,12 @@ The offensive and defensive models are both measured in three different ways. Fo
 
 To evaluate a coaches' decision making, the Attempt Models are able to show if a coach is properly deciding to Attempt a fourth down based on features of players that influence the conversion of a fourth down. 
 
-\newpage
-
 ### Offensive Player Grades Model Results
 
 The following tables displays the results of the Offensive Player Grades Models across LPM, probit and logit models.  
 
 ```{=latex}
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Offense Grades Table}
 \includegraphics[width=\textwidth]{table_images/off1.png}
@@ -252,54 +251,48 @@ The following tables displays the results of the Offensive Player Grades Models 
 
 It is found that the effect of a on-field quarterback recieving positivly significant Marginal Effect across all model types. This key finding exemplifies how quarterbacks that excel in passing the ball on quicker routes actually preform better on fourth downs. Contrary to this there are no signs of a starting quarterbacks grades being significant in the decision making of coaches on if to attempt a fourth down. This is to say that the coaches fail to properly factor in the specific archetype of quarterback that their team possesses. While the strength of significance with the starter versions of the models is vry week, the following table 4 cannot find a statistically significantdifference between the marginal effects of the on-field and starter short passing grades for quarterbacks. 
 
-Similarly we see the Tight End 1 slot shows significance at a p value of 0.05 in both on-field and starter models in terms of their pass blocking grades. The further lack of any positive significance in terms of a Tight End's pass catching grades tells us that a tight end's ability to block is more important then their ability to catch the ball in fourth down situations. Similarly to Quarterbacks, the coaches fail to properly factor in the specific archetype of tight end that their team possesses as there is a lack of significance within attempt models..
+Similarly we see the Tight End 1 slot shows significance at a p value of 0.05 in both on-field and starter models in terms of their pass blocking grades. The further lack of any positive significance in terms of a Tight End's pass catching grades tells us that a tight end's ability to block is more important then their ability to catch the ball in fourth down situations. Similarly to Quarterbacks, the coaches fail to properly factor in the specific archetype of tight end that their team possesses as there is a lack of significance within attempt models.
+
+The positive significance of running back grades in our attempt models demostrates that coaches will factor in a running back in a fourth down situation. Intuitavly this would make sense as the ball is often run on fourth down and the runningback would appear to be a key player in running the ball. However there is a lack of significance of the running back on the actual conversion of the attempt on fourth down. To support this the offensive linemen we will see show strong joint significance on conversion and not on attempt decisions. This suggests that coaches are overly focusing on the skill of their running back rather then the skill of their linemen.
+
 
 ```{=latex}
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Offense Grades Differences Table}
 \includegraphics[width=\textwidth]{table_images/off1.5.png}
 \end{table}
 ```
 
+The following tables display joint significance of the Offensive Player Grades Models across LPM, probit and logit models. Here they are grouped by position groups. This analysis is useful in the case of where a position has multiple players that are on the field of that position. For example, the Offensive Line has 5 players that are on the field at once. In our data we generalize the positions of these players from positions like left tackle, left guard, center, right gaurd and right tackle to avoid data loss when matching players into there designated slots. For example if a On-field left tackle where to play a snap at left gaurd this would create a missing value when we look to match a player to their respective column. This same logic applies for the defensive players aswell.
+
+While this generalization creates a loss of position tracking in our individual models, we still can use the joint significance to extract meaningful causal inferences. For example we can observe how the Starter models find signifiance with the offensive line as a whole. The offensive line grade's are missed by coaches in their attempt models. T
+
 ```{=latex}
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Offense Grades Model Results}
 \includegraphics[width=\textwidth]{table_images/off2.png}
 \end{table}
 ```
 
-```{=latex}
-\begin{table}[ht]
-\centering
-\caption{Offense Player Grades Joint Significance Differences Table}
-\includegraphics[width=\textwidth]{table_images/off2.5.png}
-\end{table}
-```
+
+In our last set of offensive F-values find that our starter models show significance for our entire offense as a whole. This is consistant across our robustness checks when models are ran with yards and completions aswell. Atemmpt models then show no indication of the offensive players jointly having a influence on the attempt of a fourth down.
 
 ```{=latex}
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Joint Significance Offense}
 \includegraphics[width=\textwidth]{table_images/off3.png}
 \end{table}
 ```
 
-```{=latex}
-\begin{table}[ht]
-\centering
-\caption{Offense Grades Joint Significance Differences Table}
-\includegraphics[width=\textwidth]{table_images/off3.5.png}
-\end{table}
-```
-
-\newpage 
-
 ### Defensive Player Grades Model Results
 
+Our defensive players individually suffer relatily more from positions being generalized. This is caused by how all positions on defense have many but small differences. However one result can be found with the starting linebackers of a team in a model that measures the effect of linbackers zone coverage grades on the decision to attempt a fourth down. The LB1 and LB2 both have nearly identical negative marginal effects in this matter. With coaches allowing this effect their decision making it is then concerning to find that the LB1 and LB2 zone coverage grades are not significant in the actual conversion of a fourth down
+
 ```{=latex}
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Defense Grades Table}
 \includegraphics[width=\textwidth]{table_images/def1.png}
@@ -307,53 +300,43 @@ Similarly we see the Tight End 1 slot shows significance at a p value of 0.05 in
 ```
 
 ```{=latex}
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Defense Grades Differences Table}
 \includegraphics[width=\textwidth]{table_images/def1.5.png}
 \end{table}
 ```
 
+The joint significance, found in the following table, of defensive players by position also shows significance with linebackers in our attempt models. This significance is once again not pick up in any way by our starter or on-field models. However Cornerbacks are significant at a p-value of 0.01 in both on-field and starter models. Finally, There is no evidence of cornerbacks effecting attempt probability.
+
 ```{=latex}
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Defense Grades Model Results by Position Groups}
 \includegraphics[width=\textwidth]{table_images/def2.png}
 \end{table}
 ```
 
-```{=latex}
-\begin{table}[ht]
-\centering
-\caption{Defense Player Grades Joint Significance Differences Table}
-\includegraphics[width=\textwidth]{table_images/def2.5.png}
-\end{table}
-```
+Across our different robustness checks models we find that the defensive players as a whole are significant in our starter models that measure with grades and stops. This is not the case for our on-field models or our tackles model. While our tackles models lacking significance is not surprising, as it is a different type of statistic compared to stops and grades, we find once again that on-field measurments lack significance. 
 
 ```{=latex}
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Joint Significance Defense}
 \includegraphics[width=\textwidth]{table_images/def3.png}
 \end{table}
 ```
 
-```{=latex}
-\begin{table}[ht]
-\centering
-\caption{Defense Grades Joint Significance Differences Table}
-\includegraphics[width=\textwidth]{table_images/def3.5.png}
-\end{table}
-```
-
-\newpage
-
 ## Discusion
 
 The interpretation of Starter and On-Field Models leads us to ask why there is a difference in quality of statistical significance. In our F-Statistic tables Starter Models appear to capture the performance of positions and teams better. Individual player features also seem to measure player performance better as show by a larger amount of significant variables. This leads us to believe that Starter Models have less noise in measurement then On-Field Models due to a higher consistency of players. On-field measurements are subject to players being subbed in and out of the game. While it provides greater detail in measurement it makes player slots have more variance in terms of which players are present where. For example the LB 2 of a team can be slotted into either LB slot 1 or 2 depending on the availability of the LB 1 in a On-Field play. However for a given game that LB 2 player will stay in the second slot for the entire game. 
 
+Our second possible explanation is that the starter measurements capture more about the culture, makeup and coaching of a team. If a team has "better" players they are more likely to convert a fourth down due to the skill of the players on the field but also from the experiance that is passed onto other athletes.
 
-\newpage
+possible proof -- do bad players play better when they have better players on their team? --
+
+There is more information/filled players in the starters?
+
 
 # References
 

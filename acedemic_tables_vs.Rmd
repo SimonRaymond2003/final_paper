@@ -399,9 +399,9 @@ for (dataset_idx in 1:length(dataset_names)) {
   table_colnames <- c("Variable")
   for (model_type in model_types) {
     table_colnames <- c(table_colnames, 
-                       paste0("Starter vs On-Field (", model_type, ")"),
-                       paste0("Starter vs Attempt (", model_type, ")"),
-                       paste0("On-Field vs Attempt (", model_type, ")"))
+                       paste0("Start-Fld"),
+                       paste0("Start-Att"),
+                       paste0("Fld-Att"))
   }
   
   # Generate LaTeX table
@@ -415,7 +415,7 @@ for (dataset_idx in 1:length(dataset_names)) {
         escape = FALSE) %>%
     kable_styling(latex_options = c("scale_down", "hold_position"),
                   full_width = FALSE,
-                  font_size = 8) %>%
+                  font_size = 9) %>%
     row_spec(0, bold = TRUE) %>%
     add_header_above(c(" " = 1, 
                       "LPM" = 3,

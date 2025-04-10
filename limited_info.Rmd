@@ -6,11 +6,10 @@ date: "2025-04-04"
 
 ```{r}
 library(data.table)
+library(dplyr)
 off_grades_outcome <- fread("unstandardized_processed_predict_ccafd_off_grades.csv.csv.gz")
 def_grades_outcome <- fread("unstandardized_processed_predict_ccafd_def_grades.csv.csv.gz")
-library(dplyr)
-select_off_grades_outcome <- fread("unstandardized_processed_predict_ccfd_off_grades.csv.csv.gz")
-select_def_grades_outcome <- fread("unstandardized_processed_predict_ccfd_def_grades.csv.csv.gz")
+
 ```
 
 In our data there is 2 types of 0s. the first is missing id (actually quite rare) the seccond in player not having played/ a recorded grade in the last 12 months. ie rookies/ off injury / first start in a while etc etc
@@ -284,21 +283,6 @@ for (player_name in names(starter_rb_player_cols)) {
   cat("\n")
 }
 
-# Optional: Compare regular vs starter missing data
-if (length(rb_player_cols) > 0 && length(starter_rb_player_cols) > 0) {
-  cat("Comparison of regular vs starter missing data:\n")
-  cat("  - Regular player 4 missing data rows:", nrow(rb_player_cols[["player_4"]]), "\n")
-  cat("  - Starter player 4 missing data rows:", nrow(starter_rb_player_cols[["starter_player_4"]]), "\n")
-  
-  # Check if they're missing in the same plays/games
-  if (nrow(rb_player_cols[["player_4"]]) > 0 && nrow(starter_rb_player_cols[["starter_player_4"]]) > 0) {
-    common_missing_ids <- intersect(
-      rb_player_cols[["player_4"]]$my_id,
-      starter_rb_player_cols[["starter_player_4"]]$my_id
-    )
-    cat("  - Plays/games missing in both datasets:", length(common_missing_ids), "\n")
-  }
-}
 ```
 
 ```{r}
@@ -316,3 +300,208 @@ write.csv(limited_info_starter, "limited_info_starter.csv", row.names = FALSE)
 
 
 for the select ones there are no presence cols we need to fix that!!!
+
+
+```{r}
+
+
+# Read the select data files
+select_off_grades_outcome <- fread("unstandardized_processed_predict_ccfd_off_grades.csv.csv.gz")
+select_def_grades_outcome <- fread("unstandardized_processed_predict_ccfd_def_grades.csv.csv.gz")
+
+# Extract only the starter grade columns
+starter_offense_grades_cols <- grep("starter_offense_player_.*_grades", names(select_def_grades_outcome), value = TRUE)
+starter_defense_grades_cols <- grep("starter_defense_player_.*_grades", names(select_off_grades_outcome), value = TRUE)
+
+# Create a result data table to store missing information
+result <- data.table(my_id = select_def_grades_outcome$my_id)
+
+# Process starter offense players
+offense_player_patterns <- unique(gsub("^(.*player_[0-9]+).*$", "\\1", starter_offense_grades_cols))
+for (player_pattern in offense_player_patterns) {
+  # Get all columns for this player
+  player_cols <- grep(paste0("^", player_pattern), starter_offense_grades_cols, value = TRUE)
+  
+  # Create missing information column name
+  player_num <- gsub(".*player_([0-9]+).*", "\\1", player_pattern)
+  missing_col <- paste0("starter_offense_player_", player_num, "_missing_information")
+  
+  # Mark as missing (1) if all values are 0, otherwise not missing (0)
+  result[[missing_col]] <- apply(select_def_grades_outcome[, ..player_cols], 1, function(row) {
+    if (all(row == 0)) 1 else 0
+  })
+}
+
+# Process starter defense players
+defense_player_patterns <- unique(gsub("^(.*player_[0-9]+).*$", "\\1", starter_defense_grades_cols))
+for (player_pattern in defense_player_patterns) {
+  # Get all columns for this player
+  player_cols <- grep(paste0("^", player_pattern), starter_defense_grades_cols, value = TRUE)
+  
+  # Create missing information column name
+  player_num <- gsub(".*player_([0-9]+).*", "\\1", player_pattern)
+  missing_col <- paste0("starter_defense_player_", player_num, "_missing_information")
+  
+  # Mark as missing (1) if all values are 0, otherwise not missing (0)
+  result[[missing_col]] <- apply(select_off_grades_outcome[, ..player_cols], 1, function(row) {
+    if (all(row == 0)) 1 else 0
+  })
+}
+
+transform_column_names <- function(df) {
+  # Position mapping with individual OL positions
+  offense_positions <- c(
+    # QB slots (1-3)
+    "1" = "QB", "2" = "QB2", "3" = "QB3",
+    # Backs slots (4-7)
+    "4" = "RB", "5" = "RB2", "6" = "FB", "7" = "FB2",
+    # Wide receivers slots (8-13)
+    "8" = "WR1", "9" = "WR2", "10" = "WR3", "11" = "WR4", "12" = "WR5", "13" = "WR6",
+    # Tight ends slots (14-16)
+    "14" = "TE1", "15" = "TE2", "16" = "TE3",
+    # Offensive line slots (17-24) - now with unique identifiers
+    "17" = "OL1", "18" = "OL2", "19" = "OL3", "20" = "OL4", "21" = "OL5", 
+    "22" = "OL6", "23" = "OL7", "24" = "OL8"
+  )
+  
+  defense_positions <- c(
+    # Defensive line slots (1-8)
+    "1" = "DL1", "2" = "DL2", "3" = "DL3", "4" = "DL4", 
+    "5" = "DL5", "6" = "DL6", "7" = "DL7", "8" = "DL8",
+    # Linebackers slots (9-14)
+    "9" = "LB1", "10" = "LB2", "11" = "LB3", "12" = "LB4", 
+    "13" = "LB5", "14" = "LB6",
+    # Cornerbacks slots (15-19)
+    "15" = "CB1", "16" = "CB2", "17" = "CB3", "18" = "CB4", "19" = "CB5",
+    # Safeties slots (20-23)
+    "20" = "S1", "21" = "S2", "22" = "S3", "23" = "S4"
+  )
+  
+  # Get column names
+  cols <- colnames(df)
+  new_cols <- cols
+  
+  for (i in seq_along(cols)) {
+    col <- cols[i]
+    
+    # Special handling for missing_information columns
+    if (grepl("_missing_information$", col)) {
+      # Extract player number
+      if (grepl("offense_player_", col)) {
+        player_num <- gsub(".*offense_player_([0-9]+)_missing_information$", "\\1", col)
+        if (player_num %in% names(offense_positions)) {
+          position <- offense_positions[player_num]
+          new_cols[i] <- ifelse(grepl("^starter_", col),
+                               paste0("starter_", position, "_missing_information"),
+                               paste0(position, "_missing_information"))
+        }
+      } else if (grepl("defense_player_", col)) {
+        player_num <- gsub(".*defense_player_([0-9]+)_missing_information$", "\\1", col)
+        if (player_num %in% names(defense_positions)) {
+          position <- defense_positions[player_num]
+          new_cols[i] <- ifelse(grepl("^starter_", col),
+                               paste0("starter_", position, "_missing_information"),
+                               paste0(position, "_missing_information"))
+        }
+      }
+      # Skip the rest of processing for missing_information columns
+      next
+    }
+    
+    # Handle offense player patterns
+    if (grepl("offense_player_", col)) {
+      player_num <- gsub(".*offense_player_([0-9\\-]+).*", "\\1", col)
+      
+      # Determine position
+      if (grepl("-", player_num)) {
+        # Handle OL range notation if present (e.g., "17-21")
+        range_parts <- strsplit(player_num, "-")[[1]]
+        if (length(range_parts) == 2) {
+          start_num <- as.numeric(range_parts[1])
+          if (start_num >= 17 && start_num <= 24) {
+            position <- paste0("OL", start_num - 16)  # Convert slot to OL position number
+          } else {
+            position <- paste0("OFF", player_num)
+          }
+        } else {
+          position <- paste0("OFF", player_num)
+        }
+      } else if (player_num %in% names(offense_positions)) {
+        position <- offense_positions[player_num]
+      } else {
+        position <- paste0("OFF", player_num)
+      }
+      
+      # Replace pattern and remove first two words after
+      if (grepl("^starter_", col)) {
+        parts <- strsplit(gsub("starter_offense_player_[0-9\\-]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste("starter", position, paste(parts, collapse = "_"), sep = "_")
+      } else {
+        parts <- strsplit(gsub("offense_player_[0-9\\-]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste(position, paste(parts, collapse = "_"), sep = "_")
+      }
+    }
+    
+    # Handle defense player patterns
+    else if (grepl("defense_player_", col)) {
+      player_num <- gsub(".*defense_player_([0-9]+).*", "\\1", col)
+      
+      # Determine position
+      if (player_num %in% names(defense_positions)) {
+        position <- defense_positions[player_num]
+      } else {
+        position <- paste0("DEF", player_num)
+      }
+      
+      # Replace pattern and remove first two words after
+      if (grepl("^starter_", col)) {
+        parts <- strsplit(gsub("starter_defense_player_[0-9]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste("starter", position, paste(parts, collapse = "_"), sep = "_")
+      } else {
+        parts <- strsplit(gsub("defense_player_[0-9]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste(position, paste(parts, collapse = "_"), sep = "_")
+      }
+    }
+  }
+  
+  # Set the new column names
+  colnames(df) <- new_cols
+  return(df)
+}
+# Apply the transformation function to the result data
+result <- transform_column_names(result)
+
+ # Define positions to keep - use the same for both present and missing_information
+  positions_to_keep <- c(
+    # Offense
+    "QB",              # QB
+    "WR1", "WR2", "WR3",   # WR1, WR2, WR3
+    "TE1",
+    "RB",               # RB 
+    # dont keep OL due to multicolinearity
+    # Defense
+    "LB1", "LB2", "LB3", "LB4",   # LB1 to LB4
+    "CB1", "CB2", "CB3",         # CB1, CB2, CB3
+    "S1", "S2"                   # S1, S2
+  )
+# Filter the result data to keep only the selected positions
+result <- result %>%
+  select(my_id, contains(positions_to_keep))
+
+# Write to a single CSV file
+write.csv(result, "select_limited_info_starters.csv", row.names = FALSE)
+
+```
+

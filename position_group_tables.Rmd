@@ -217,6 +217,71 @@ calculate_joint_test <- function(mfx_matrix, tval_matrix, variables, col_name) {
   })
 }
 
+# ===== ADD THIS FUNCTION =====
+# Add this after the calculate_joint_test function (around line 253)
+
+# Function to compare F-statistics between two models
+# Function to compare F-statistics between two models
+compare_fstats <- function(mfx_matrix, tval_matrix, position_vars, 
+                           col_name1, col_name2) {
+  # Calculate F-statistic for first model
+  test_result1 <- calculate_joint_test(
+    mfx_matrix, tval_matrix, position_vars, col_name1
+  )
+  
+  # Calculate F-statistic for second model
+  test_result2 <- calculate_joint_test(
+    mfx_matrix, tval_matrix, position_vars, col_name2
+  )
+  
+  # Extract F-statistics and degrees of freedom
+  f_stat1 <- as.numeric(gsub("\\*+$", "", test_result1$f_stat))
+  f_stat2 <- as.numeric(gsub("\\*+$", "", test_result2$f_stat))
+  
+  # Extract degrees of freedom
+  df1_parts <- as.numeric(strsplit(gsub("\\[|\\]", "", test_result1$df), ",")[[1]])
+  df2_parts <- as.numeric(strsplit(gsub("\\[|\\]", "", test_result2$df), ",")[[1]])
+  
+  # Calculate F-ratio (larger F divided by smaller F)
+  if (f_stat1 >= f_stat2) {
+    f_ratio <- f_stat1 / f_stat2
+    larger_model <- col_name1
+    smaller_model <- col_name2
+    df_num <- df1_parts[2]  # df2 from model 1
+    df_denom <- df2_parts[2]  # df2 from model 2
+  } else {
+    f_ratio <- f_stat2 / f_stat1
+    larger_model <- col_name2
+    smaller_model <- col_name1
+    df_num <- df2_parts[2]  # df2 from model 2
+    df_denom <- df1_parts[2]  # df2 from model 1
+  }
+  
+  # Calculate p-value
+  p_value <- 1 - pf(f_ratio, df_num, df_denom)
+  
+  # Add significance stars
+  stars <- ifelse(p_value < 0.01, "***",
+                ifelse(p_value < 0.05, "**",
+                      ifelse(p_value < 0.10, "*", "")))
+  
+  # Format result
+  result <- sprintf("%.2f%s [%.3f]", f_ratio, stars, p_value)
+  
+  # Simplified direction based on which model is starter vs on-field
+  direction <- ifelse(larger_model == col_name1,
+                    ifelse(grepl("Starter", col_name1), "(Starter > On-Field)", "(On-Field > Starter)"),
+                    ifelse(grepl("Starter", col_name2), "(Starter > On-Field)", "(On-Field > Starter)"))
+  
+  return(list(
+    result = result,
+    direction = direction,
+    f_stat1 = f_stat1,
+    f_stat2 = f_stat2,
+    p_value = p_value
+  ))
+}
+
 # Function to clean variable names for display
 clean_var_name <- function(var_name, position = NULL) {
   # Remove position prefix if it matches the position group
@@ -602,8 +667,7 @@ control_header_idx <- nrow(joint_test_data) + 1
   # Add footnote
   latex_table <- latex_table %>% 
     footnote(
-      general = paste("F-statistics reported with degrees of freedom [df1,df2] and significance levels.",
-                     "Stars indicate significance of joint test for all variables in position group."),
+      general = paste("F-statistics reported with degrees of freedom [df1,df2] and significance levels."),
       symbol = c("* p < 0.10, ** p < 0.05, *** p < 0.01")
     )
   
@@ -612,44 +676,18 @@ control_header_idx <- nrow(joint_test_data) + 1
 ```
 
 ```{r, results='asis', echo=FALSE, message=FALSE, warning=FALSE}
-# Function to compare Starter vs On-Field coefficients
-compare_starter_onfield <- function(mfx_matrix, se_matrix, position_vars, model_type) {
-  # Get column indices
+# Function to compare F-statistics between Starter and On-Field models
+compare_starter_onfield <- function(mfx_matrix, tval_matrix, position_vars, model_type) {
+  # Get column names
   starter_col <- paste("Starter", model_type)
   onfield_col <- paste("On-Field", model_type)
   
-  # Calculate average coefficients across variables
-  starter_coef <- mean(mfx_matrix[position_vars, starter_col], na.rm = TRUE)
-  onfield_coef <- mean(mfx_matrix[position_vars, onfield_col], na.rm = TRUE)
+  # Use the compare_fstats function to compare F-statistics
+  comparison_result <- compare_fstats(
+    mfx_matrix, tval_matrix, position_vars, starter_col, onfield_col
+  )
   
-  # Calculate pooled standard error
-  n_vars <- length(position_vars)
-  starter_se <- sqrt(sum(se_matrix[position_vars, starter_col]^2, na.rm = TRUE)) / n_vars
-  onfield_se <- sqrt(sum(se_matrix[position_vars, onfield_col]^2, na.rm = TRUE)) / n_vars
-  pooled_se <- sqrt(starter_se^2 + onfield_se^2)
-  
-  # Calculate z-statistic
-  z_stat <- (onfield_coef - starter_coef) / pooled_se
-  
-  # Calculate p-value
-  p_value <- 2 * (1 - pnorm(abs(z_stat)))
-  
-  # Add significance stars
-  stars <- ifelse(p_value < 0.01, "***",
-                 ifelse(p_value < 0.05, "**",
-                       ifelse(p_value < 0.10, "*", "")))
-  
-  # Determine direction
-  direction <- ifelse(is.na(z_stat), "(No difference)",
-                     ifelse(z_stat > 0, "(On-Field > Starter)", 
-                           ifelse(z_stat < 0, "(Starter > On-Field)", "(No difference)")))
-  
-  return(list(
-    z_stat = z_stat,
-    p_value = p_value,
-    stars = stars,
-    direction = direction
-  ))
+  return(comparison_result)
 }
 
 # Create comparison tables for each dataset
@@ -659,27 +697,27 @@ for (dataset_idx in 1:length(dataset_names)) {
   # Get matrices for this dataset
   if (dataset_name == "Offense Grades") {
     mfx_matrix <- off_grades_mfx
-    se_matrix <- off_grades_se
+    tval_matrix <- off_grades_tval
     is_offense <- TRUE
   } else if (dataset_name == "Offense Yards") {
     mfx_matrix <- off_yards_mfx
-    se_matrix <- off_yards_se
+    tval_matrix <- off_yards_tval
     is_offense <- TRUE
   } else if (dataset_name == "Offense Completions") {
     mfx_matrix <- off_completions_mfx
-    se_matrix <- off_completions_se
+    tval_matrix <- off_completions_tval
     is_offense <- TRUE
   } else if (dataset_name == "Defense Stops") {
     mfx_matrix <- def_stops_mfx
-    se_matrix <- def_stops_se
+    tval_matrix <- def_stops_tval
     is_offense <- FALSE
   } else if (dataset_name == "Defense Grades") {
     mfx_matrix <- def_grades_mfx
-    se_matrix <- def_grades_se
+    tval_matrix <- def_grades_tval
     is_offense <- FALSE
   } else {
     mfx_matrix <- def_tackles_mfx
-    se_matrix <- def_tackles_se
+    tval_matrix <- def_tackles_tval
     is_offense <- FALSE
   }
   
@@ -705,31 +743,22 @@ for (dataset_idx in 1:length(dataset_names)) {
       display_name <- position_display_names[[group_name]]
       
       # Perform comparisons for each model type
-      lpm_results <- compare_starter_onfield(mfx_matrix, se_matrix, 
+      lpm_results <- compare_starter_onfield(mfx_matrix, tval_matrix, 
                                            position_groups[[group_name]], "LPM")
-      probit_results <- compare_starter_onfield(mfx_matrix, se_matrix, 
+      probit_results <- compare_starter_onfield(mfx_matrix, tval_matrix, 
                                               position_groups[[group_name]], "Probit")
-      logit_results <- compare_starter_onfield(mfx_matrix, se_matrix, 
+      logit_results <- compare_starter_onfield(mfx_matrix, tval_matrix, 
                                              position_groups[[group_name]], "Logit")
       
       # Format results
       comparison_data[row_idx, "Position"] <- paste0("\\textbf{", display_name, "}")
-      comparison_data[row_idx, "LPM"] <- sprintf("%.2f%s [%.3f]", 
-                                                abs(lpm_results$z_stat), 
-                                                lpm_results$stars, 
-                                                lpm_results$p_value)
+      comparison_data[row_idx, "LPM"] <- lpm_results$result
       comparison_data[row_idx, "LPM_Direction"] <- lpm_results$direction
       
-      comparison_data[row_idx, "Probit"] <- sprintf("%.2f%s [%.3f]", 
-                                                   abs(probit_results$z_stat), 
-                                                   probit_results$stars, 
-                                                   probit_results$p_value)
+      comparison_data[row_idx, "Probit"] <- probit_results$result
       comparison_data[row_idx, "Probit_Direction"] <- probit_results$direction
       
-      comparison_data[row_idx, "Logit"] <- sprintf("%.2f%s [%.3f]", 
-                                                  abs(logit_results$z_stat), 
-                                                  logit_results$stars, 
-                                                  logit_results$p_value)
+      comparison_data[row_idx, "Logit"] <- logit_results$result
       comparison_data[row_idx, "Logit_Direction"] <- logit_results$direction
       
       row_idx <- row_idx + 1
@@ -742,7 +771,7 @@ for (dataset_idx in 1:length(dataset_names)) {
                       booktabs = TRUE,
                       col.names = c("Position", "LPM", "", "Probit", "", "Logit", ""),
                       align = c('l', 'c', 'l', 'c', 'l', 'c', 'l'),
-                      caption = paste(dataset_name, "Model Comparisons - Starter vs On-Field"),
+                      caption = paste(dataset_name, "F-Statistic Comparisons - Starter vs On-Field Models"),
                       escape = FALSE) %>%
     kable_styling(latex_options = c("scale_down", "hold_position", "striped"),
                  font_size = 9,
@@ -753,9 +782,8 @@ for (dataset_idx in 1:length(dataset_names)) {
     row_spec(seq(1, nrow(comparison_data), by = 2), background = "#F8F8F8") %>%
     footnote(
       symbol = c("* p < 0.10, ** p < 0.05, *** p < 0.01"),
-      general = paste("Z-statistics reported with p-values in brackets.",
-                     "Stars indicate significance level of difference between Starter and On-Field coefficients.",
-                     "Direction indicates which model has larger coefficient values.")
+      general = paste("F-ratio tests comparing the joint significance of position variables between models.", 
+                    "* p < 0.10, ** p < 0.05, *** p < 0.01")
     )
   
   print(latex_table)

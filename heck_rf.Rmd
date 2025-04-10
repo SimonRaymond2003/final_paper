@@ -233,10 +233,12 @@ for (dt in list(outcome_data_player, outcome_data_starter)) {
   dt[, attendance_raw := NULL]
   
   # Define positions to keep - use the same for both present and missing_information
+  # Define positions to keep - use the same for both present and missing_information
   positions_to_keep <- c(
     # Offense
     "QB",              # QB
     "WR1", "WR2", "WR3",   # WR1, WR2, WR3
+    "TE1",
     "RB",               # RB 
     # dont keep OL due to multicolinearity
     # Defense
@@ -353,7 +355,15 @@ position_pattern <- paste0("^(", paste(position_prefixes, collapse = "|"), ")_")
   probit_model_starter <- glm(conversion ~ ., data = outcome_data_starter, family = binomial(link = "probit"))
   logit_model_starter <- glm(conversion ~ ., data = outcome_data_starter, family = binomial(link = "logit"))
 
-  # MODEL 3: OLS model with GIMR and attempt
+select_limited_info_starters <- fread("select_limited_info_starters.csv")
+#drop my id
+select_limited_info_starters[, my_id := NULL]
+#cbind it to select data
+select_data <- cbind(select_data, select_limited_info_starters)
+
+ 
+
+  # MODEL 3:   and attempt
   ols_model_attempts <- lm(attempt ~ ., data = select_data)
   probit_model_attempts <- glm(attempt ~ ., data = select_data, family = binomial(link = "probit"))
   logit_model_attempts <- glm(attempt ~ ., data = select_data, family = binomial(link = "logit"))

@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.3.31)  6 APR 2025 19:52
+This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.3.31)  10 APR 2025 08:34
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -802,9 +802,15 @@ LaTeX Font Info:    Trying to load font information for U+msb on input line 89.
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(1)/m/n' will be
+(Font)              scaled to size 9.0pt on input line 160.
+LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(1)/m/n' will be
 (Font)              scaled to size 5.0pt on input line 160.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(2)/m/n' will be
+(Font)              scaled to size 9.00082pt on input line 160.
+LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(2)/m/n' will be
 (Font)              scaled to size 5.00046pt on input line 160.
+LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(3)/m/n' will be
+(Font)              scaled to size 8.99904pt on input line 160.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(3)/m/n' will be
 (Font)              scaled to size 4.99947pt on input line 160.
 
@@ -832,7 +838,11 @@ LaTeX Warning: `!h' float specifier changed to `!ht'.
 
 [3]
 
-[4] (./acedemic_tables_vs.aux)
+[4]
+
+[5]
+
+[6] (./acedemic_tables_vs.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
@@ -842,12 +852,12 @@ LaTeX Warning: There were multiply-defined labels.
 
  ) 
 Here is how much of TeX's memory you used:
- 18329 strings out of 475848
- 332117 string characters out of 5774456
- 1396629 words of memory out of 5000000
- 41010 multiletter control sequences out of 15000+600000
- 563500 words of font info for 76 fonts, out of 8000000 for 9000
+ 18339 strings out of 475848
+ 332410 string characters out of 5774456
+ 1394299 words of memory out of 5000000
+ 41016 multiletter control sequences out of 15000+600000
+ 564461 words of font info for 82 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  90i,14n,114p,474b,393s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on acedemic_tables_vs.pdf (4 pages).
+Output written on acedemic_tables_vs.pdf (6 pages).

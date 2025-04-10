@@ -241,6 +241,70 @@ calculate_joint_test <- function(mfx_matrix, tval_matrix, variables, col_name, d
   })
 }
 
+# Update the compare_fstats function (in the functions chunk, around line 276)
+compare_fstats <- function(mfx_matrix, tval_matrix, position_vars, 
+                           col_name1, col_name2, dataset_name) {
+  # Calculate F-statistic for first model
+  test_result1 <- calculate_joint_test(
+    mfx_matrix, tval_matrix, position_vars, col_name1, dataset_name
+  )
+  
+  # Calculate F-statistic for second model
+  test_result2 <- calculate_joint_test(
+    mfx_matrix, tval_matrix, position_vars, col_name2, dataset_name
+  )
+  
+  # Extract F-statistics and degrees of freedom
+  f_stat1 <- as.numeric(gsub("\\*+$", "", test_result1$f_stat))
+  f_stat2 <- as.numeric(gsub("\\*+$", "", test_result2$f_stat))
+  
+  # Extract degrees of freedom
+  df1_parts <- as.numeric(strsplit(gsub("\\[|\\]", "", test_result1$df), ",")[[1]])
+  df2_parts <- as.numeric(strsplit(gsub("\\[|\\]", "", test_result2$df), ",")[[1]])
+  
+  # Calculate F-ratio (larger F divided by smaller F)
+  if (f_stat1 >= f_stat2) {
+    f_ratio <- f_stat1 / f_stat2
+    larger_model <- col_name1
+    smaller_model <- col_name2
+    df_num <- df1_parts[2]  # df2 from model 1
+    df_denom <- df2_parts[2]  # df2 from model 2
+  } else {
+    f_ratio <- f_stat2 / f_stat1
+    larger_model <- col_name2
+    smaller_model <- col_name1
+    df_num <- df2_parts[2]  # df2 from model 2
+    df_denom <- df1_parts[2]  # df2 from model 1
+  }
+  
+  # Calculate p-value
+  p_value <- 1 - pf(f_ratio, df_num, df_denom)
+  
+  # Add significance stars
+  stars <- ifelse(p_value < 0.01, "***",
+                ifelse(p_value < 0.05, "**",
+                      ifelse(p_value < 0.10, "*", "")))
+  
+  # Format result
+  result <- sprintf("%.2f%s [%.3f]", f_ratio, stars, p_value)
+  
+  # Simplified direction based on which model is starter vs on-field
+  direction <- ifelse(
+    (grepl("Starter", larger_model) && grepl("On-Field", smaller_model)) ||
+    (grepl("Starter", smaller_model) && grepl("On-Field", larger_model)),
+    ifelse(grepl("Starter", larger_model), "(Starter > On-Field)", "(On-Field > Starter)"),
+    "(Other comparison)"  # This case shouldn't happen with your current calls
+  )
+  
+  return(list(
+    result = result,
+    direction = direction,
+    f_stat1 = f_stat1,
+    f_stat2 = f_stat2,
+    p_value = p_value
+  ))
+}
+
 # Function to get all offensive or defensive position variables
 get_position_variables <- function(matrix, is_offense) {
   all_variables <- rownames(matrix)
@@ -563,9 +627,7 @@ compare_starter_onfield_all <- function(mfx_matrix, se_matrix, position_vars, mo
   ))
 }
 
-# Create comparison tables for offense/defense combined
 create_comparison_table <- function(datasets, is_offense) {
-  # Initialize comparison data frame
   comparison_data <- data.frame(
     Dataset = character(),
     LPM = character(),
@@ -577,51 +639,39 @@ create_comparison_table <- function(datasets, is_offense) {
     stringsAsFactors = FALSE
   )
   
-  # Process each dataset
   row_idx <- 1
   for (dataset_key in names(datasets)) {
     dataset <- datasets[[dataset_key]]
     mfx_matrix <- dataset$mfx
+    tval_matrix <- dataset$tval
     
-    # Get standard error matrix
-    if (is_offense) {
-      if (dataset_key == "off_grades") se_matrix <- off_grades_se
-      else if (dataset_key == "off_yards") se_matrix <- off_yards_se
-      else se_matrix <- off_completions_se
-    } else {
-      if (dataset_key == "def_grades") se_matrix <- def_grades_se
-      else if (dataset_key == "def_stops") se_matrix <- def_stops_se
-      else se_matrix <- def_tackles_se
-    }
-    
-    # Get all position variables
+    # Get position variables
     position_vars <- get_position_variables(mfx_matrix, is_offense)
     
-    # Perform comparisons for each model type
-    lpm_results <- compare_starter_onfield_all(mfx_matrix, se_matrix, position_vars, "LPM")
-    probit_results <- compare_starter_onfield_all(mfx_matrix, se_matrix, position_vars, "Probit")
-    logit_results <- compare_starter_onfield_all(mfx_matrix, se_matrix, position_vars, "Logit")
+    # Compare F-statistics for each model type
+    lpm_comparison <- compare_fstats(
+      mfx_matrix, tval_matrix, position_vars,
+      "Starter LPM", "On-Field LPM", dataset_key
+    )
     
-    # Add results to table
+    probit_comparison <- compare_fstats(
+      mfx_matrix, tval_matrix, position_vars,
+      "Starter Probit", "On-Field Probit", dataset_key
+    )
+    
+    logit_comparison <- compare_fstats(
+      mfx_matrix, tval_matrix, position_vars,
+      "Starter Logit", "On-Field Logit", dataset_key
+    )
+    
+    # Add to table
     comparison_data[row_idx, "Dataset"] <- dataset$name
-    
-    comparison_data[row_idx, "LPM"] <- sprintf("%.2f%s [%.3f]", 
-                                              abs(lpm_results$z_stat), 
-                                              lpm_results$stars, 
-                                              lpm_results$p_value)
-    comparison_data[row_idx, "LPM_Direction"] <- lpm_results$direction
-    
-    comparison_data[row_idx, "Probit"] <- sprintf("%.2f%s [%.3f]", 
-                                                 abs(probit_results$z_stat), 
-                                                 probit_results$stars, 
-                                                 probit_results$p_value)
-    comparison_data[row_idx, "Probit_Direction"] <- probit_results$direction
-    
-    comparison_data[row_idx, "Logit"] <- sprintf("%.2f%s [%.3f]", 
-                                                abs(logit_results$z_stat), 
-                                                logit_results$stars, 
-                                                logit_results$p_value)
-    comparison_data[row_idx, "Logit_Direction"] <- logit_results$direction
+    comparison_data[row_idx, "LPM"] <- lpm_comparison$result
+    comparison_data[row_idx, "LPM_Direction"] <- lpm_comparison$direction
+    comparison_data[row_idx, "Probit"] <- probit_comparison$result
+    comparison_data[row_idx, "Probit_Direction"] <- probit_comparison$direction
+    comparison_data[row_idx, "Logit"] <- logit_comparison$result
+    comparison_data[row_idx, "Logit_Direction"] <- logit_comparison$direction
     
     row_idx <- row_idx + 1
   }
@@ -632,15 +682,13 @@ create_comparison_table <- function(datasets, is_offense) {
 # Generate comparison tables
 offense_comparison <- create_comparison_table(offense_datasets, TRUE)
 defense_comparison <- create_comparison_table(defense_datasets, FALSE)
-
-# Function to print comparison tables
 print_comparison_table <- function(table_data, caption) {
   kable(table_data, 
         format = "latex",
         booktabs = TRUE,
         col.names = c("Dataset", "LPM", "", "Probit", "", "Logit", ""),
         align = c('l', 'r', 'l', 'r', 'l', 'r', 'l'),
-        caption = caption,
+        caption = paste("F-Statistic Comparisons Between Starter and On-Field Models:", caption),
         escape = FALSE) %>%
     kable_styling(latex_options = c("scale_down", "hold_position", "striped"),
                  font_size = 10,
@@ -649,10 +697,10 @@ print_comparison_table <- function(table_data, caption) {
     column_spec(c(2,4,6), width = "2.8cm") %>%
     column_spec(c(3,5,7), width = "3.2cm") %>%
     footnote(
-      general = paste("Stars indicate significance level of difference between Starter and On-Field coefficients.", "* p < 0.10, ** p < 0.05, *** p < 0.01", sep = " ")
+      general = paste("F-ratio tests comparing the joint significance of position variables between models.", 
+                  "* p < 0.10, ** p < 0.05, *** p < 0.01", sep = " ")
     )
 }
-
 # Print offense comparison table
 print_comparison_table(
   offense_comparison,
