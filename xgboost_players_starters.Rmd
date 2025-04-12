@@ -1,0 +1,827 @@
+---
+title: "xgboost_players_starters"
+output: pdf_document
+date: "2025-04-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(data.table)
+library(dplyr)
+
+# Load the data
+off_outcome <- fread("processed_predict_ccafd_off_grades.csv.csv.gz")
+off_select <- fread("processed_predict_ccfd_off_grades.csv.csv.gz")
+def_outcome <- fread("processed_predict_ccafd_def_grades.csv.csv.gz")
+def_select <- fread("processed_predict_ccfd_def_grades.csv.csv.gz")
+
+# Function to transform column names
+transform_column_names <- function(df) {
+  # Position mapping with individual positions
+  offense_positions <- c(
+    # QB slots (1-3)
+    "1" = "QB", "2" = "QB2", "3" = "QB3",
+    # Backs slots (4-7)
+    "4" = "RB", "5" = "RB2", "6" = "FB", "7" = "FB2",
+    # Wide receivers slots (8-13)
+    "8" = "WR1", "9" = "WR2", "10" = "WR3", "11" = "WR4", "12" = "WR5", "13" = "WR6",
+    # Tight ends slots (14-16)
+    "14" = "TE1", "15" = "TE2", "16" = "TE3",
+    # Offensive line slots (17-24)
+    "17" = "OL1", "18" = "OL2", "19" = "OL3", "20" = "OL4", "21" = "OL5", 
+    "22" = "OL6", "23" = "OL7", "24" = "OL8"
+  )
+  
+  defense_positions <- c(
+    # Defensive line slots (1-8)
+    "1" = "DL1", "2" = "DL2", "3" = "DL3", "4" = "DL4", 
+    "5" = "DL5", "6" = "DL6", "7" = "DL7", "8" = "DL8",
+    # Linebackers slots (9-14)
+    "9" = "LB1", "10" = "LB2", "11" = "LB3", "12" = "LB4", 
+    "13" = "LB5", "14" = "LB6",
+    # Cornerbacks slots (15-19)
+    "15" = "CB1", "16" = "CB2", "17" = "CB3", "18" = "CB4", "19" = "CB5",
+    # Safeties slots (20-23)
+    "20" = "S1", "21" = "S2", "22" = "S3", "23" = "S4"
+  )
+  
+  # Get column names
+  cols <- colnames(df)
+  new_cols <- cols
+  
+  for (i in seq_along(cols)) {
+    col <- cols[i]
+    
+    # Special handling for missing_information columns
+    if (grepl("_missing_information$", col)) {
+      if (grepl("offense_player_", col)) {
+        player_num <- gsub(".*offense_player_([0-9]+)_missing_information$", "\\1", col)
+        if (player_num %in% names(offense_positions)) {
+          position <- offense_positions[player_num]
+          new_cols[i] <- ifelse(grepl("^starter_", col),
+                               paste0("starter_", position, "_missing_information"),
+                               paste0(position, "_missing_information"))
+        }
+      } else if (grepl("defense_player_", col)) {
+        player_num <- gsub(".*defense_player_([0-9]+)_missing_information$", "\\1", col)
+        if (player_num %in% names(defense_positions)) {
+          position <- defense_positions[player_num]
+          new_cols[i] <- ifelse(grepl("^starter_", col),
+                               paste0("starter_", position, "_missing_information"),
+                               paste0(position, "_missing_information"))
+        }
+      }
+      next
+    }
+    
+    # Handle offense player patterns
+    if (grepl("offense_player_", col)) {
+      player_num <- gsub(".*offense_player_([0-9\\-]+).*", "\\1", col)
+      
+      # Determine position
+      if (grepl("-", player_num)) {
+        range_parts <- strsplit(player_num, "-")[[1]]
+        if (length(range_parts) == 2) {
+          start_num <- as.numeric(range_parts[1])
+          if (start_num >= 17 && start_num <= 24) {
+            position <- paste0("OL", start_num - 16)
+          } else {
+            position <- paste0("OFF", player_num)
+          }
+        } else {
+          position <- paste0("OFF", player_num)
+        }
+      } else if (player_num %in% names(offense_positions)) {
+        position <- offense_positions[player_num]
+      } else {
+        position <- paste0("OFF", player_num)
+      }
+      
+      # Replace pattern and remove first two words after
+      if (grepl("^starter_", col)) {
+        parts <- strsplit(gsub("starter_offense_player_[0-9\\-]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste("starter", position, paste(parts, collapse = "_"), sep = "_")
+      } else {
+        parts <- strsplit(gsub("offense_player_[0-9\\-]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste(position, paste(parts, collapse = "_"), sep = "_")
+      }
+    }
+    
+    # Handle defense player patterns
+    else if (grepl("defense_player_", col)) {
+      player_num <- gsub(".*defense_player_([0-9]+).*", "\\1", col)
+      
+      if (player_num %in% names(defense_positions)) {
+        position <- defense_positions[player_num]
+      } else {
+        position <- paste0("DEF", player_num)
+      }
+      
+      if (grepl("^starter_", col)) {
+        parts <- strsplit(gsub("starter_defense_player_[0-9]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste("starter", position, paste(parts, collapse = "_"), sep = "_")
+      } else {
+        parts <- strsplit(gsub("defense_player_[0-9]+_", "", col), "_")[[1]]
+        if (length(parts) >= 2) {
+          parts <- parts[-(1:2)]
+        }
+        new_cols[i] <- paste(position, paste(parts, collapse = "_"), sep = "_")
+      }
+    }
+  }
+  
+  # Set the new column names
+  colnames(df) <- new_cols
+  return(df)
+}
+
+# Function to extract year from my_id and create season indicators
+process_dataset <- function(data) {
+  # First transform column names
+  dt <- transform_column_names(data)
+  
+  # Extract year from my_id (format: YYYY_XX_XXX_XXX_XXX)
+  dt[, year := as.integer(substr(my_id, 1, 4))]
+  
+  # Create season indicator variables
+  years <- sort(unique(dt$year))
+  reference_year <- min(years)  # Use earliest year as reference
+  
+  for (yr in years) {
+    if (yr != reference_year) {
+      var_name <- paste0("season_", yr)
+      dt[, (var_name) := as.integer(year == yr)]
+    }
+  }
+  
+  # Remove temporary year column
+  dt[, year := NULL]
+  
+  # Remove team fixed effects (year*_team_*)
+  team_fe_cols <- grep("^year.*_team_", names(dt), value = TRUE)
+  if (length(team_fe_cols) > 0) {
+    dt[, (team_fe_cols) := NULL]
+  }
+  
+  # Remove coach columns (FirstName_LastName pattern)
+  coach_cols <- names(dt)[grep("^[A-Z][a-z]+_[A-Z][a-z]+$", names(dt))]
+  if (length(coach_cols) > 0) {
+    dt[, (coach_cols) := NULL]
+  }
+  
+  # Remove my_id after extracting year information
+  dt[, my_id := NULL]
+  
+  # kill the cols taht contain the words missing_information 
+  dt[, grep("missing_information", names(dt), value = TRUE) := NULL]
+  
+  return(dt)
+}
+
+# Process all datasets
+off_outcome <- process_dataset(off_outcome)
+off_select <- process_dataset(off_select)
+def_outcome <- process_dataset(def_outcome)
+def_select <- process_dataset(def_select)
+
+```
+
+```{r}
+library(data.table)
+
+# Assuming you've already run the preprocessing code from paste.txt:
+# off_outcome, off_select, def_outcome, def_select are available
+
+# Function to split data into regular and starter versions
+split_regular_starter <- function(data) {
+  # Make copies to work with
+  regular_data <- copy(data)
+  starter_data <- copy(data)
+  
+  # For regular data: Keep only non-starter columns
+  starter_cols <- grep("^starter_", names(regular_data), value = TRUE)
+  if (length(starter_cols) > 0) {
+    regular_data[, (starter_cols) := NULL]
+  }
+  
+  # For starter data: Keep only starter columns and shared columns
+  # First, identify position-related columns that aren't starter columns
+  position_prefixes <- c("QB", "QB[2-3]", "RB", "RB2", "FB", "FB2", 
+                         "WR\\d+", "TE\\d+", "OL\\d+", 
+                         "DL\\d+", "LB\\d+", "CB\\d+", "S\\d+")
+  
+  # Create regex pattern for position columns
+  position_pattern <- paste0("^(", paste(position_prefixes, collapse = "|"), ")_")
+  
+  # Find all position columns that are NOT starter columns
+  player_cols <- grep(position_pattern, names(starter_data), value = TRUE)
+  player_cols <- player_cols[!grepl("^starter_", player_cols)]
+  
+  # Remove non-starter position columns from starter data
+  if (length(player_cols) > 0) {
+    starter_data[, (player_cols) := NULL]
+  }
+  
+  return(list(regular = regular_data, starter = starter_data))
+}
+
+# Split all datasets
+off_outcome_split <- split_regular_starter(off_outcome)
+off_select_split <- split_regular_starter(off_select)
+def_outcome_split <- split_regular_starter(def_outcome)
+def_select_split <- split_regular_starter(def_select)
+
+# Extract the datasets
+off_outcome_regular <- off_outcome_split$regular
+off_outcome_starter <- off_outcome_split$starter
+#off_select_regular <- off_select_split$regular
+off_select_starter <- off_select_split$starter
+def_outcome_regular <- def_outcome_split$regular
+def_outcome_starter <- def_outcome_split$starter
+#def_select_regular <- def_select_split$regular
+def_select_starter <- def_select_split$starter
+
+```
+
+```{r}
+library(data.table)
+library(xgboost)
+library(ROCR)
+library(parallel)
+
+# Function to run XGBoost grid search and testing on datasets
+run_xgboost_analysis <- function(data, outcome_column = "conversion", 
+                                 output_prefix = "model") {
+  
+  # Ensure outcome column is present
+  if (!(outcome_column %in% names(data))) {
+    stop(paste("Column", outcome_column, "not found in dataset"))
+  }
+  
+  cat("\nRunning XGBoost analysis for", output_prefix, "on column", outcome_column, "\n")
+  
+  # Prepare the XGBoost matrices
+  formula_str <- paste0("~ . - 1 - ", outcome_column)
+  xs <- model.matrix(as.formula(formula_str), data = data)
+  y <- as.numeric(as.character(data[[outcome_column]]))
+  
+  # Create parameter grid - EXACTLY as in original code
+  grid <- expand.grid(
+    eta = seq(0.001, 0.1, by = 0.001),
+    max_depth = seq(3, 7, by = 1),
+    min_child_weight = seq(1, 1, by = 1),        
+    subsample = seq(0.8, 0.8, by = 0.2),
+    colsample_bytree = seq(1, 1, by = 0.2),
+    lambda = seq(1, 1, by = 1),                
+    alpha = seq(0, 0, by = 1),                  
+    gamma = seq(0, 0, by = 0.1),               
+    nrounds = seq(150, 150, by = 50)  # Fixed 300 as upper limit
+  )
+  
+  # Sample grid points
+  conf_lev <- .95
+  num_max <- 5
+  n <- ceiling(log(1-conf_lev)/log(1-num_max/nrow(grid)))
+  ind <- sample(nrow(grid), n, replace = FALSE)
+  rgrid <- grid[ind, ]
+  
+  # Set up parallel processing
+  nc <- detectCores() - 1
+  
+  # Calculate scale_pos_weight for imbalanced dataset
+  scale_pos_weight <- sum(y == 0) / sum(y == 1)
+  cat("Class imbalance (negative:positive):", scale_pos_weight, "\n")
+  
+  # Validation phase
+  cat("\nPhase 1: Validation Phase\n")
+  n_validations <- 20
+  validation_results <- matrix(nrow = nrow(rgrid), ncol = n_validations)
+  
+  for (j in 1:nrow(rgrid)) {
+    cat("\nTesting parameter set", j, "of", nrow(rgrid), "\n")
+    
+    for (i in 1:n_validations) {
+      # Create validation split
+      idx <- unique(sample(nrow(xs), nrow(xs), TRUE))
+      train_x <- xs[idx, ]
+      train_y <- y[idx]
+      val_x <- xs[-idx, ]
+      val_y <- y[-idx]
+      
+      prm <- list(
+        booster = "gbtree",
+        objective = "binary:logistic",
+        max_depth = rgrid[j, "max_depth"],
+        eta = rgrid[j, "eta"],
+        subsample = rgrid[j, "subsample"],
+        colsample_bytree = rgrid[j, "colsample_bytree"],
+        gamma = rgrid[j, "gamma"],
+        min_child_weight = rgrid[j, "min_child_weight"],
+        alpha = rgrid[j, "alpha"],
+        lambda = rgrid[j, "lambda"],
+        scale_pos_weight = scale_pos_weight,
+        nthread = nc
+      )
+      
+      dm_train <- xgb.DMatrix(data = train_x, label = train_y)
+      mdl <- xgb.train(
+        params = prm,
+        data = dm_train,
+        nrounds = rgrid[j, "nrounds"],
+        verbose = FALSE
+      )
+      
+      p <- predict(mdl, xgb.DMatrix(data = val_x))
+      pred <- prediction(p, val_y)
+      validation_results[j, i] <- performance(pred, "auc")@y.values[[1]]
+    }
+  }
+  
+  # Find best parameters
+  mean_validation <- rowMeans(validation_results)
+  best_params_idx <- which.max(mean_validation)
+  best_params <- rgrid[best_params_idx,]
+  
+  # Display best parameters and validation performance
+  cat("\nBest parameters found:\n")
+  print(best_params)
+  cat("Mean validation AUC:", mean_validation[best_params_idx], "\n")
+  
+  # Create parameter list for xgb.train
+  best_params_list <- as.list(best_params[-which(names(best_params) == "nrounds")])
+  best_params_list$booster <- "gbtree"
+  best_params_list$objective <- "binary:logistic"
+  best_params_list$scale_pos_weight <- scale_pos_weight
+  best_params_list$nthread <- nc
+  
+  # Run test iterations with best parameters
+  n_tests <- 1000
+  cat("\nRunning", n_tests, "test iterations with best parameters...\n")
+  test_aucs <- numeric(n_tests)
+  
+  for(i in 1:n_tests) {
+    if(i %% 10 == 0) cat("\nTest iteration", i)
+    
+    # Create test split
+    idx <- unique(sample(nrow(xs), nrow(xs), TRUE))
+    train_x <- xs[idx, ]
+    train_y <- y[idx]
+    test_x <- xs[-idx, ]
+    test_y <- y[-idx]
+    
+    # Train model on training set
+    dm_train <- xgb.DMatrix(data = train_x, label = train_y)
+    mdl <- xgb.train(
+      params = best_params_list,
+      data = dm_train,
+      nrounds = best_params[["nrounds"]],
+      verbose = FALSE
+    )
+    
+    # Test on test set
+    p <- predict(mdl, xgb.DMatrix(data = test_x))
+    pred <- prediction(p, test_y)
+    test_aucs[i] <- performance(pred, "auc")@y.values[[1]]
+  }
+  
+  # Print test results
+  cat("\nTest Results over", n_tests, "iterations:\n")
+  cat("Mean AUC:", mean(test_aucs), "\n")
+  cat("SD AUC:", sd(test_aucs), "\n")
+  cat("95% CI:", mean(test_aucs) - 1.96 * sd(test_aucs), 
+      "to", mean(test_aucs) + 1.96 * sd(test_aucs), "\n")
+  
+  # Plot AUC distribution
+  output_file <- paste0(output_prefix, "_auc_distribution.png")
+  png(filename = output_file, width = 800, height = 600, res = 100)
+  
+  plot(test_aucs, col="red", pch=20,
+       main=paste("AUC Test Distribution -", output_prefix),
+       xlab="Iteration", ylab="AUC")
+  abline(h=mean(test_aucs), col="blue", lwd=2, lty=2)  # Add line to show mean
+  abline(h=mean(test_aucs) - 1.96 * sd(test_aucs), col="green", lwd=2, lty=3)
+  abline(h=mean(test_aucs) + 1.96 * sd(test_aucs), col="green", lwd=2, lty=3)
+  legend("bottomright", 
+         legend=c("AUC Values", "Mean", "95% CI Bounds"),
+         col=c("red", "blue", "green"),
+         lty=c(NA, 2, 3),
+         pch=c(20, NA, NA))
+  
+  dev.off()
+  cat("\nPlot saved to", output_file, "\n")
+  
+  # Train final model on full dataset
+  dm_full <- xgb.DMatrix(data = xs, label = y)
+  final_model <- xgb.train(
+    params = best_params_list,
+    data = dm_full,
+    nrounds = best_params[["nrounds"]],
+    verbose = FALSE
+  )
+  
+  # Save model and parameters
+  model_file <- paste0(output_prefix, "_model.rds")
+  saveRDS(final_model, file = model_file)
+  cat("Model saved to", model_file, "\n")
+  
+  params_file <- paste0(output_prefix, "_best_params.csv")
+  best_params_list$nrounds <- best_params[["nrounds"]]
+  write.csv(as.data.frame(best_params_list), file = params_file, row.names = FALSE)
+  cat("Best parameters saved to", params_file, "\n")
+  
+  # Get variable importance
+  importance <- xgb.importance(model = final_model)
+  importance_file <- paste0(output_prefix, "_importance.csv")
+  write.csv(importance, file = importance_file, row.names = FALSE)
+  cat("Variable importance saved to", importance_file, "\n")
+  
+  # Return results
+  return(list(
+    model = final_model,
+    best_params = best_params_list,
+    test_aucs = test_aucs,
+    importance = importance
+  ))
+}
+
+# Apply function to each dataset
+cat("\n\n========== RUNNING XGBOOST MODELS FOR ALL DATASETS ==========\n\n")
+
+# Run for off_outcome_regular
+cat("\n\n========== OFFENSIVE REGULAR OUTCOME MODEL ==========\n\n")
+off_outcome_regular_results <- run_xgboost_analysis(
+  data = off_outcome_regular,
+  outcome_column = "conversion",
+  output_prefix = "off_outcome_regular"
+)
+
+# Run for off_outcome_starter
+cat("\n\n========== OFFENSIVE STARTER OUTCOME MODEL ==========\n\n")
+off_outcome_starter_results <- run_xgboost_analysis(
+  data = off_outcome_starter,
+  outcome_column = "conversion",
+  output_prefix = "off_outcome_starter"
+)
+
+# Run for off_select_starter
+cat("\n\n========== OFFENSIVE STARTER SELECT MODEL ==========\n\n")
+off_select_starter_results <- run_xgboost_analysis(
+  data = off_select_starter,
+  outcome_column = "attempt",
+  output_prefix = "off_select_starter"
+)
+
+# Run for def_outcome_regular
+cat("\n\n========== DEFENSIVE REGULAR OUTCOME MODEL ==========\n\n")
+def_outcome_regular_results <- run_xgboost_analysis(
+  data = def_outcome_regular,
+  outcome_column = "conversion",
+  output_prefix = "def_outcome_regular"
+)
+
+# Run for def_outcome_starter
+cat("\n\n========== DEFENSIVE STARTER OUTCOME MODEL ==========\n\n")
+def_outcome_starter_results <- run_xgboost_analysis(
+  data = def_outcome_starter,
+  outcome_column = "conversion",
+  output_prefix = "def_outcome_starter"
+)
+
+# Run for def_select_starter
+cat("\n\n========== DEFENSIVE STARTER SELECT MODEL ==========\n\n")
+def_select_starter_results <- run_xgboost_analysis(
+  data = def_select_starter,
+  outcome_column = "attempt",
+  output_prefix = "def_select_starter"
+)
+
+cat("\n\n========== ALL MODELS COMPLETED ==========\n\n")
+
+# Save all results
+saveRDS(
+  list(
+    off_outcome_regular = off_outcome_regular_results,
+    off_outcome_starter = off_outcome_starter_results,
+    off_select_starter = off_select_starter_results,
+    def_outcome_regular = def_outcome_regular_results,
+    def_outcome_starter = def_outcome_starter_results,
+    def_select_starter = def_select_starter_results
+  ),
+  file = "all_xgboost_results.rds"
+)
+
+cat("All results saved to all_xgboost_results.rds\n")
+```
+
+```{r}
+# Conversion Models Plot (2x2 grid)
+# Load required libraries
+library(gridExtra)
+library(grid)
+library(ggplot2)
+
+# Function to create a single AUC distribution plot
+create_auc_plot <- function(aucs, title) {
+  mean_auc <- mean(aucs)
+  sd_auc <- sd(aucs)
+  ci_lower <- mean_auc - 1.96 * sd_auc
+  ci_upper <- mean_auc + 1.96 * sd_auc
+  
+  # Create data frame for ggplot
+  df <- data.frame(
+    Iteration = 1:length(aucs),
+    AUC = aucs
+  )
+  
+  # Create the plot
+  p <- ggplot(df, aes(x = Iteration, y = AUC)) +
+    geom_point(color = "red", size = 1) +
+    geom_hline(yintercept = mean_auc, color = "blue", linetype = "dashed", size = 1) +
+    geom_hline(yintercept = ci_lower, color = "green", linetype = "dotted", size = 1) +
+    geom_hline(yintercept = ci_upper, color = "green", linetype = "dotted", size = 1) +
+    labs(
+      title = title,
+      subtitle = sprintf("Mean AUC: %.3f (95%% CI: %.3f-%.3f)", 
+                         mean_auc, ci_lower, ci_upper)
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 10, face = "bold"),
+      plot.subtitle = element_text(size = 8),
+      axis.title = element_text(size = 9),
+      axis.text = element_text(size = 8)
+    ) +
+    ylim(min(min(aucs) * 0.99, ci_lower * 0.99), 
+         max(max(aucs) * 1.01, ci_upper * 1.01))
+  
+  return(p)
+}
+
+# Load results
+results <- readRDS("all_xgboost_results.rds")
+
+# Create plots for conversion models
+# Left column: Starter models
+off_starter_outcome <- create_auc_plot(
+  results$off_outcome_starter$test_aucs,
+  "Offensive Starters - Conversion"
+)
+
+def_starter_outcome <- create_auc_plot(
+  results$def_outcome_starter$test_aucs,
+  "Defensive Starters - Conversion"
+)
+
+# Right column: On-Field models (regular)
+off_onfield_outcome <- create_auc_plot(
+  results$off_outcome_regular$test_aucs,
+  "Offensive On-Field - Conversion"
+)
+
+def_onfield_outcome <- create_auc_plot(
+  results$def_outcome_regular$test_aucs,
+  "Defensive On-Field - Conversion"
+)
+
+# Create row and column titles
+top_title <- textGrob(
+  "Conversion Prediction Models",
+  gp = gpar(fontsize = 14, fontface = "bold")
+)
+
+col_titles <- arrangeGrob(
+  textGrob("Starter Models", gp = gpar(fontsize = 12)),
+  textGrob("On-Field Models", gp = gpar(fontsize = 12)),
+  ncol = 2
+)
+
+# Create a corrected legend
+legend_data <- data.frame(
+  x = 1:3,
+  y = rep(1, 3),
+  type = c("AUC Values", "Mean", "95% CI Bounds")
+)
+
+# Customize the plot for proper legend appearance
+legend_plot <- ggplot() +
+  geom_point(data = data.frame(x=1, y=1), aes(x=x, y=y, color="AUC Values")) +
+  geom_line(data = data.frame(x=c(1,2), y=c(2,2)), aes(x=x, y=y, color="Mean", linetype="Mean")) +
+  geom_line(data = data.frame(x=c(1,2), y=c(3,3)), aes(x=x, y=y, color="95% CI Bounds", linetype="95% CI Bounds")) +
+  scale_color_manual(name = NULL, 
+                     values = c("AUC Values" = "red", 
+                                "Mean" = "blue", 
+                                "95% CI Bounds" = "green")) +
+  scale_linetype_manual(name = NULL,
+                        values = c("Mean" = "dashed",
+                                   "95% CI Bounds" = "dotted")) +
+  theme_void() +
+  theme(legend.position = "bottom", 
+        legend.box = "horizontal",
+        legend.title = element_blank())
+
+# Extract the legend
+legend <- cowplot::get_legend(legend_plot)
+
+# Arrange the plots in a 2x2 grid
+conversion_plots <- arrangeGrob(
+  off_starter_outcome, off_onfield_outcome,
+  def_starter_outcome, def_onfield_outcome,
+  ncol = 2,
+  left = textGrob("                 Offense                          Defense", 
+                 rot = 90, gp = gpar(fontsize = 12))
+)
+
+# Combine everything
+combined_plot <- grid.arrange(
+  top_title,
+  col_titles,
+  conversion_plots,
+  grid::grobTree(legend),
+  heights = c(0.1, 0.05, 0.75, 0.1)
+)
+
+# Save the plot
+ggsave(
+  "conversion_models_comparison.png",
+  combined_plot,
+  width = 12,
+  height = 10,
+  dpi = 150
+)
+
+# Print confirmation
+cat("Conversion models plot saved to conversion_models_comparison.png\n")
+```
+
+```{r}
+# Selection Models Plot (1x2 grid)
+# Load required libraries if not already loaded
+library(gridExtra)
+library(grid)
+library(ggplot2)
+
+# Function to create a single AUC distribution plot
+create_auc_plot <- function(aucs, title) {
+  mean_auc <- mean(aucs)
+  sd_auc <- sd(aucs)
+  ci_lower <- mean_auc - 1.96 * sd_auc
+  ci_upper <- mean_auc + 1.96 * sd_auc
+  
+  # Create data frame for ggplot
+  df <- data.frame(
+    Iteration = 1:length(aucs),
+    AUC = aucs
+  )
+  
+  # Create the plot
+  p <- ggplot(df, aes(x = Iteration, y = AUC)) +
+    geom_point(color = "red", size = 1) +
+    geom_hline(yintercept = mean_auc, color = "blue", linetype = "dashed", size = 1) +
+    geom_hline(yintercept = ci_lower, color = "green", linetype = "dotted", size = 1) +
+    geom_hline(yintercept = ci_upper, color = "green", linetype = "dotted", size = 1) +
+    labs(
+      title = title,
+      subtitle = sprintf("Mean AUC: %.3f (95%% CI: %.3f-%.3f)", 
+                         mean_auc, ci_lower, ci_upper)
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 10, face = "bold"),
+      plot.subtitle = element_text(size = 8),
+      axis.title = element_text(size = 9),
+      axis.text = element_text(size = 8)
+    ) +
+    ylim(min(min(aucs) * 0.99, ci_lower * 0.99), 
+         max(max(aucs) * 1.01, ci_upper * 1.01))
+  
+  return(p)
+}
+
+# Load results if not already loaded
+if (!exists("results")) {
+  results <- readRDS("all_xgboost_results.rds")
+}
+
+# Create plots for attempt selection models
+off_select <- create_auc_plot(
+  results$off_select_starter$test_aucs,
+  "Offensive Starters - Attempt Selection"
+)
+
+def_select <- create_auc_plot(
+  results$def_select_starter$test_aucs,
+  "Defensive Starters - Attempt Selection"
+)
+
+# Create titles
+top_title <- textGrob(
+  "Attempt Selection Models",
+  gp = gpar(fontsize = 14, fontface = "bold")
+)
+
+col_titles <- arrangeGrob(
+  textGrob("Offensive Selection", gp = gpar(fontsize = 12)),
+  textGrob("Defensive Selection", gp = gpar(fontsize = 12)),
+  ncol = 2
+)
+
+# Create a corrected legend
+# Customize the plot for proper legend appearance
+legend_plot <- ggplot() +
+  geom_point(data = data.frame(x=1, y=1), aes(x=x, y=y, color="AUC Values")) +
+  geom_line(data = data.frame(x=c(1,2), y=c(2,2)), aes(x=x, y=y, color="Mean", linetype="Mean")) +
+  geom_line(data = data.frame(x=c(1,2), y=c(3,3)), aes(x=x, y=y, color="95% CI Bounds", linetype="95% CI Bounds")) +
+  scale_color_manual(name = NULL, 
+                     values = c("AUC Values" = "red", 
+                                "Mean" = "blue", 
+                                "95% CI Bounds" = "green")) +
+  scale_linetype_manual(name = NULL,
+                        values = c("Mean" = "dashed",
+                                   "95% CI Bounds" = "dotted")) +
+  theme_void() +
+  theme(legend.position = "bottom", 
+        legend.box = "horizontal",
+        legend.title = element_blank())
+
+# Extract the legend
+legend <- cowplot::get_legend(legend_plot)
+
+# Arrange the plots in a 1x2 grid
+selection_plots <- arrangeGrob(
+  off_select, def_select,
+  ncol = 2
+)
+
+# Combine everything
+combined_plot <- grid.arrange(
+  top_title,
+  col_titles,
+  selection_plots,
+  grid::grobTree(legend),
+  heights = c(0.1, 0.05, 0.75, 0.1)
+)
+
+# Save the plot
+ggsave(
+  "selection_models_comparison.png",
+  combined_plot,
+  width = 12,
+  height = 6,
+  dpi = 150
+)
+
+# Print confirmation
+cat("Selection models plot saved to selection_models_comparison.png\n")
+
+# Create a summary table for all models
+model_summary <- data.frame(
+  Model = c(
+    "Offensive Starters - Conversion",
+    "Offensive On-Field - Conversion",
+    "Defensive Starters - Conversion",
+    "Defensive On-Field - Conversion",
+    "Offensive Starters - Selection",
+    "Defensive Starters - Selection"
+  ),
+  Mean_AUC = c(
+    mean(results$off_outcome_starter$test_aucs),
+    mean(results$off_outcome_regular$test_aucs),
+    mean(results$def_outcome_starter$test_aucs),
+    mean(results$def_outcome_regular$test_aucs),
+    mean(results$off_select_starter$test_aucs),
+    mean(results$def_select_starter$test_aucs)
+  ),
+  SD_AUC = c(
+    sd(results$off_outcome_starter$test_aucs),
+    sd(results$off_outcome_regular$test_aucs),
+    sd(results$def_outcome_starter$test_aucs),
+    sd(results$def_outcome_regular$test_aucs),
+    sd(results$off_select_starter$test_aucs),
+    sd(results$def_select_starter$test_aucs)
+  )
+)
+
+# Calculate 95% CI
+model_summary$CI_Lower <- model_summary$Mean_AUC - 1.96 * model_summary$SD_AUC
+model_summary$CI_Upper <- model_summary$Mean_AUC + 1.96 * model_summary$SD_AUC
+
+# Print table
+print(model_summary)
+
+# Save summary table
+write.csv(model_summary, "model_performance_summary.csv", row.names = FALSE)
+```
+

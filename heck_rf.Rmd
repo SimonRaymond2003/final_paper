@@ -15,13 +15,36 @@ library(sandwich)
 library(lmtest)
 library(car)
 library(mfx)  # Added for better marginal effects calculation
-
+library(dplyr)
 # Options for better output
 options(max.print=10000)
 
 ```
 
 ```{r}
+
+# Add this function to your code
+create_year_fixed_effects <- function(data) {
+  # Extract year from my_id (format: YYYY_XX_XXX_XXX_XXX)
+  data[, year := as.integer(substr(my_id, 1, 4))]
+  
+  # Create dummy variables for each year (except reference year)
+  years <- sort(unique(data$year))
+  reference_year <- min(years)  # Use the earliest year as reference
+  
+  for (yr in years) {
+    if (yr != reference_year) {
+      var_name <- paste0("year", yr)
+      data[, (var_name) := as.integer(year == yr)]
+    }
+  }
+  
+  # Remove the temporary year column
+  data[, year := NULL]
+  
+  return(data)
+}
+
 transform_column_names <- function(df) {
   # Position mapping with individual OL positions
   offense_positions <- c(
@@ -161,26 +184,42 @@ run_heckman <- function(select_data, outcome_data, n_validation = n_validation) 
  # Data preparation
   select_data[, attempt := as.numeric(as.character(attempt))]
   
-  # Add your new cleaning code here
-  # Remove unwanted columns
-  select_data[, c("attendance_raw", "attendance_pct") := NULL]
-  # Remove specific columns if they exist
-  if ("yardline_31_40" %in% names(select_data)) select_data[, yardline_31_40 := NULL]
-  if ("Giff_Smith" %in% names(select_data)) select_data[, Giff_Smith := NULL]
-  
-  
+# Add your new cleaning code here
+# Remove unwanted columns
+select_data[, c("attendance_raw", "attendance_pct") := NULL]
+# Remove specific columns if they exist
+if ("yardline_31_40" %in% names(select_data)) select_data[, yardline_31_40 := NULL]
+if ("Giff_Smith" %in% names(select_data)) select_data[, Giff_Smith := NULL]
+
+# Remove team fixed effects (any column starting with "year" and containing "team")
+team_fe_cols <- grep("^year.*_team_", names(select_data), value = TRUE)
+if (length(team_fe_cols) > 0) {
+  select_data[, (team_fe_cols) := NULL]
+}
+
+# Create year fixed effects from my_id in select data
+select_data <- create_year_fixed_effects(select_data)
+
+# Remove team fixed effects from outcome data
+team_fe_cols_outcome <- grep("^year.*_team_", names(outcome_data), value = TRUE)
+if (length(team_fe_cols_outcome) > 0) {
+  outcome_data[, (team_fe_cols_outcome) := NULL]
+}
+
+# Create year fixed effects from my_id in outcome data 
+outcome_data <- create_year_fixed_effects(outcome_data)
   
   # Make a copy of select_data for Random Forest
   rf_data <- copy(select_data)
   
   # Remove coach columns
-  coach_cols <- names(rf_data)[grep("^[A-Z][a-z]+_[A-Z][a-z]+", names(rf_data))]
-  rf_data[, (coach_cols) := NULL]
+  # coach_cols <- names(rf_data)[grep("^[A-Z][a-z]+_[A-Z][a-z]+", names(rf_data))]
+  # rf_data[, (coach_cols) := NULL]
   
   # Remove specific coach columns
-  rf_data[, Bill_OBrien := NULL] 
-  rf_data[, Kevin_OConnell := NULL]
-  rf_data[, DeMeco_Ryans := NULL]
+  # rf_data[, Bill_OBrien := NULL] 
+  # rf_data[, Kevin_OConnell := NULL]
+  # rf_data[, DeMeco_Ryans := NULL]
   
   # Prepare data for Random Forest
   rf_data[, my_id := NULL]  # Remove ID column
@@ -226,12 +265,13 @@ select_data[, GIMR := GIMR]
 for (dt in list(outcome_data_player, outcome_data_starter)) {
   dt[, my_id := NULL]
   dt[, yardline_31_40 := NULL]
-  dt[, year2022_team_CLE := NULL]
-  
+  #dt[, year2022_team_CLE := NULL]
+  # If 2017 is your reference year
+if ("year2017" %in% names(dt)) dt[, year2017 := NULL]
   # Remove attendance variables
   dt[, attendance_pct := NULL]
   dt[, attendance_raw := NULL]
-  
+
   # Define positions to keep - use the same for both present and missing_information
   # Define positions to keep - use the same for both present and missing_information
   positions_to_keep <- c(
@@ -412,9 +452,26 @@ for (i in 1:length(datasets)) {
   # Read the data
   cat(sprintf("Reading data: %s\n", datasets[[i]]$outcome))
   outcome_data <- fread(datasets[[i]]$outcome)
+  #glimpse(outcome_data)
   
   cat(sprintf("Reading data: %s\n", datasets[[i]]$select))
   select_data <- fread(datasets[[i]]$select)
+  #glimpse(select_data)
+  select_data[, DeMeco_Ryans := NULL]
+
+  
+  # Identify coach columns in select_data
+coach_cols <- names(select_data)[grep("^[A-Z][a-z]+_[A-Z][A-Za-z']+", names(select_data))]
+
+if (length(coach_cols) > 0) {
+  # Create a data.table with just my_id and coach columns
+  coach_dt <- select_data[, c("my_id", coach_cols), with = FALSE]
+  
+  # Merge coach columns into outcome_data based on my_id
+  outcome_data <- merge(outcome_data, coach_dt, by = "my_id", all.x = TRUE)
+  
+  cat("Added", length(coach_cols), "coach columns to outcome data\n")
+}
   
   # Apply the column name transformation to both datasets
   outcome_data <- transform_column_names(outcome_data)

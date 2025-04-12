@@ -1,0 +1,2 @@
+"eta","max_depth","min_child_weight","subsample","colsample_bytree","lambda","alpha","gamma","booster","objective","scale_pos_weight","nthread","nrounds"
+0.02,3,1,0.8,1,1,0,0,"gbtree","binary:logistic",0.917461832061069,19,150
