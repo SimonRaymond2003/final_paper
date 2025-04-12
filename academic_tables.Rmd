@@ -267,7 +267,7 @@ position_display_names <- list(
 )
 
 # Control variable categories (excluding player variables which will be handled separately)
-control_categories <- c("Game Situation", "Coach Variables", "Team Stats", "Season/Team FE", "Coach FE", "Player Presence")
+control_categories <- c("Game Situation", "Coach Variables", "Team Stats", "Season FE", "Coach FE", "Player Presence")
 
 # Create academic tables for each dataset
 for (dataset_idx in 1:length(dataset_names)) {
@@ -447,22 +447,6 @@ for (dataset_idx in 1:length(dataset_names)) {
     # Initialize with "Yes" for standard controls
     control_vals <- c("", rep("Yes", length(control_categories)))
     
-    # Special case for Season/Team FE in Attempt models
-    if (grepl("Attempt", col_name) && "Season/Team FE" %in% control_categories) {
-      season_idx <- which(control_categories == "Season/Team FE")
-      control_vals[season_idx + 1] <- "No"
-    }
-    
-    # Set Coach FE to No for onfield and starter models, Yes for attempt models
-    if ("Coach FE" %in% control_categories) {
-      coach_idx <- which(control_categories == "Coach FE")
-      if (grepl("On-Field|Starter", col_name)) {
-        control_vals[coach_idx + 1] <- "No"
-      } else if (grepl("Attempt", col_name)) {
-        control_vals[coach_idx + 1] <- "Yes"
-      }
-    }
-    
     # Handle Player Presence control
     # Yes for On-Field and Starter models, No for Attempt models
     player_presence_idx <- which(control_categories == "Player Presence")
@@ -581,4 +565,3 @@ for (dataset_idx in 1:length(dataset_names)) {
   
   print(latex_table)
 }
-```

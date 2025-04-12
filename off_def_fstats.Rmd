@@ -483,7 +483,7 @@ offense_fstats_table <- create_offense_fstats_table()
 defense_fstats_table <- create_defense_fstats_table()
 
 # Control variable categories
-control_categories <- c("Game Situation", "Coach Variables", "Team Stats", "Season/Team FE", "Coach FE", "GIMR", "Player Presence")
+control_categories <- c("Game Situation", "Coach Variables", "Team Stats", "Season FE", "Coach FE", "GIMR", "Player Presence")
 
 # Create control variables section for offense
 create_control_variables <- function(is_offense) {
@@ -498,18 +498,6 @@ create_control_variables <- function(is_offense) {
   for (col in model_cols) {
     # Initialize with "Yes" for standard controls
     control_vals <- c("", rep("Yes", length(control_categories)))
-    
-    # Special case for Season/Team FE in Attempt models
-    if (grepl("Attempt", col) && "Season/Team FE" %in% control_categories) {
-      season_idx <- which(control_categories == "Season/Team FE")
-      control_vals[season_idx + 1] <- "No"
-    }
-    
-    # Special case for Coach FE in Starter and On-Field models
-    if ((grepl("Starter", col) || grepl("On-Field", col)) && "Coach FE" %in% control_categories) {
-      coach_idx <- which(control_categories == "Coach FE")
-      control_vals[coach_idx + 1] <- "No"
-    }
     
     # Special case for GIMR in Attempt models
     if (grepl("Attempt", col) && "GIMR" %in% control_categories) {
@@ -527,8 +515,10 @@ create_control_variables <- function(is_offense) {
     
     # Add values for player variable controls
     if (is_offense) {
-      control_vals <- c(control_vals, "No", "Yes")
+      # For offensive models: control defensive players (Yes) but not offensive players (No)
+      control_vals <- c(control_vals, "Yes", "No")
     } else {
+      # For defensive models: control offensive players (Yes) but not defensive players (No)
       control_vals <- c(control_vals, "Yes", "No")
     }
     

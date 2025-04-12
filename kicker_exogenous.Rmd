@@ -87,16 +87,15 @@ for(d in 1:length(ctd1_datasets)) {
 control_info <- vector("list", length(ctd1_datasets))
 names(control_info) <- dataset_names
 
-# Initialize control info
+# Initialize control info - Set all FE-related controls to FALSE
 for(d in 1:length(ctd1_datasets)) {
   control_info[[d]] <- list(
     game_situation = TRUE,
-    environmental = TRUE,
     coach = TRUE,
     team_stats = TRUE,
     player_vars = TRUE,
     player_presence = FALSE, 
-    team_fe = TRUE,
+    team_fe = FALSE,  # Changed from TRUE to FALSE
     coach_fe = FALSE
   )
 }
@@ -162,6 +161,10 @@ analyze_yardline <- function(dt, yardline_var) {
     if ("my_id" %in% names(dt_filtered)) dt_filtered[, my_id := NULL]
     yardline_cols <- grep("^yardline_", names(dt_filtered), value = TRUE)
     if (length(yardline_cols) > 0) dt_filtered[, (yardline_cols) := NULL]
+    
+    # Remove season/team FE variables before they enter the model
+    season_team_cols <- grep("^year\\d{4}_team_", names(dt_filtered), value = TRUE)
+    if (length(season_team_cols) > 0) dt_filtered[, (season_team_cols) := NULL]
     
     # Results container for all models
     results <- list(
@@ -242,7 +245,6 @@ analyze_yardline <- function(dt, yardline_var) {
       model_vars <- names(LPM_model$coefficients)[-1]  # Remove intercept
       
       has_game_situation <- any(grepl("down_|distance_|quarter_|score_diff|home_team", model_vars))
-      has_environmental <- any(grepl("temp_|wind_|precipitation|roof_type", model_vars))
       has_coach <- any(grepl("coach_", model_vars))
       has_team_stats <- any(grepl("team_stats_", model_vars))
       has_player_vars <- any(grepl("offense_player_|defense_player_", model_vars))
@@ -251,7 +253,6 @@ analyze_yardline <- function(dt, yardline_var) {
       
       # print("Control variables present:")
       # print(paste("Game situation:", has_game_situation))
-      # print(paste("Environmental:", has_environmental))
       # print(paste("Coach:", has_coach))
       # print(paste("Team stats:", has_team_stats))
       # print(paste("Player vars:", has_player_vars))
@@ -262,7 +263,6 @@ analyze_yardline <- function(dt, yardline_var) {
       results$lpm[[1]] <- NA
       results$lpm[[2]] <- NA
       has_game_situation <- FALSE
-      has_environmental <- FALSE
       has_coach <- FALSE
       has_team_stats <- FALSE
       has_player_vars <- FALSE
@@ -345,14 +345,13 @@ analyze_yardline <- function(dt, yardline_var) {
     # Store sample size
     results$n <- nrow(dt_filtered)
     
-    # Add control info
+    # Add control info - Force team_fe to FALSE
     results$controls <- list(
       game_situation = has_game_situation,
-      environmental = has_environmental,
       coach = has_coach,
       team_stats = has_team_stats,
       player_vars = has_player_vars,
-      team_fe = has_team_fe,
+      team_fe = FALSE,  # Explicitly set to FALSE
       coach_fe = has_coach_fe,
       player_presence = FALSE # Explicitly set player_presence to No
     )
@@ -438,11 +437,11 @@ for (d in 1:length(ctd1_datasets)) {
         n = result$n
       )
       
-      # Update control info 
+      # Update control info - Force team_fe to FALSE
       if (!is.null(result$controls)) {
         # Make sure all required control fields are present
         missing_controls <- setdiff(
-          c("game_situation", "environmental", "coach", "team_stats", 
+          c("game_situation", "coach", "team_stats", 
             "player_vars", "player_presence", "team_fe", "coach_fe"),
           names(result$controls)
         )
@@ -456,6 +455,8 @@ for (d in 1:length(ctd1_datasets)) {
           }
         }
         
+        # Ensure team_fe is always FALSE
+        result$controls$team_fe <- FALSE
         control_info[[d]] <- result$controls
       }
     } else {
@@ -469,23 +470,33 @@ for (d in 1:length(ctd1_datasets)) {
   }
 }
 
-# Verify the structure of control_info
+# Verify the structure of control_info and ensure team_fe is always FALSE
 for (d in 1:length(dataset_names)) {
   # print(paste("Control info for", dataset_names[d]))
   if (!is.null(control_info[[d]])) {
-    # print(control_info[[d]])
+    # Force team_fe to FALSE regardless of what was detected
+    control_info[[d]]$team_fe <- FALSE
+    
     # Make sure all needed fields are present
-    needed_fields <- c("game_situation", "environmental", "coach", "team_stats", 
+    needed_fields <- c("game_situation", "coach", "team_stats", 
                      "player_vars", "player_presence", "team_fe", "coach_fe")
     for (field in needed_fields) {
       if (!(field %in% names(control_info[[d]]))) {
-        # print(paste("Adding missing control field:", field))
         # Default to FALSE for all except player_presence (TRUE)
-        control_info[[d]][[field]] <- if(field == "player_presence") TRUE else FALSE
+        control_info[[d]][[field]] <- if(field == "player_presence") FALSE else FALSE
       }
     }
   } else {
-    # print("No control info available")
+    # Create empty control info with team_fe set to FALSE
+    control_info[[d]] <- list(
+      game_situation = TRUE,
+      coach = TRUE,
+      team_stats = TRUE,
+      player_vars = TRUE,
+      player_presence = FALSE,
+      team_fe = FALSE,
+      coach_fe = FALSE
+    )
   }
 }
 ```
@@ -526,12 +537,11 @@ create_dataset_table <- function(dataset_index) {
     
     # Controls Section
     "Game Situation",
-    "Environmental",
     "Coach Variables",
     "Team Stats",
     "Player Variables",
     "Player Presence",
-    "Season/Team FE",
+    "Season FE",  # Changed from "Season/Team FE" to "Season FE"
     "Coach FE",
     "Sample Size"
   )
@@ -551,12 +561,11 @@ create_dataset_table <- function(dataset_index) {
   dataset_controls <- control_info[[dataset_index]]
   if (is.null(dataset_controls)) {
     dataset_controls <- list(
-      game_situation = FALSE,
-      environmental = FALSE,
-      coach = FALSE,
-      team_stats = FALSE,
-      player_vars = FALSE,
-      player_presence = TRUE,
+      game_situation = TRUE,
+      coach = TRUE,
+      team_stats = TRUE,
+      player_vars = TRUE,
+      player_presence = FALSE,
       team_fe = FALSE,
       coach_fe = FALSE
     )
@@ -564,17 +573,20 @@ create_dataset_table <- function(dataset_index) {
   
   # Make sure all required control fields are present in dataset_controls
   missing_controls <- setdiff(
-    c("game_situation", "environmental", "coach", "team_stats", 
+    c("game_situation", "coach", "team_stats", 
       "player_vars", "player_presence", "team_fe", "coach_fe"),
     names(dataset_controls)
   )
   
   if (length(missing_controls) > 0) {
     for (ctrl in missing_controls) {
-      # Default missing controls to FALSE except player_presence (TRUE)
-      dataset_controls[[ctrl]] <- if(ctrl == "player_presence") TRUE else FALSE
+      # Default missing controls to FALSE
+      dataset_controls[[ctrl]] <- FALSE
     }
   }
+  
+  # Ensure team_fe is FALSE
+  dataset_controls$team_fe <- FALSE
   
   # Ensure all rows are populated correctly
   for (yl in 1:length(yardline_ranges)) {
@@ -600,17 +612,16 @@ create_dataset_table <- function(dataset_index) {
       df[6, yardline] <- format_tval(logit_results["kicker"])
       
       # Control variables section - adjusting indices
-      df[7, yardline] <- if(dataset_controls$game_situation) "Yes" else "Yes"
-      df[8, yardline] <- if(dataset_controls$environmental) "Yes" else "Yes"
-      df[9, yardline] <- if(dataset_controls$coach) "Yes" else "Yes"
-      df[10, yardline] <- if(dataset_controls$team_stats) "Yes" else "Yes"
-      df[11, yardline] <- if(dataset_controls$player_vars) "Yes" else "Yes"
-      df[12, yardline] <- if(dataset_controls$player_presence) "No" else "No"
-      df[13, yardline] <- if(dataset_controls$team_fe) "Yes" else "Yes"
-      df[14, yardline] <- if(dataset_controls$coach_fe) "Yes" else "No"
+      df[7, yardline] <- "Yes"
+      df[8, yardline] <- "Yes"
+      df[9, yardline] <- "Yes"
+      df[10, yardline] <- "Yes"
+      df[11, yardline] <- "No"  # Player presence is No
+      df[12, yardline] <- "No"  # Season FE is No
+      df[13, yardline] <- "No"  # Coach FE is No
       
       # Sample Size
-      df[15, yardline] <- format(lpm_results["n"], big.mark = ",")
+      df[14, yardline] <- format(lpm_results["n"], big.mark = ",")
     } else {
       # Fill with placeholders - adjusting indices
       df[c(1, 2, 3, 4, 5, 6), yardline] <- "---"
@@ -618,11 +629,10 @@ create_dataset_table <- function(dataset_index) {
       df[8, yardline] <- "Yes"
       df[9, yardline] <- "Yes"
       df[10, yardline] <- "Yes"
-      df[11, yardline] <- "Yes"
-      df[12, yardline] <- "No"  # Default player_presence to No
-      df[13, yardline] <- "No"
-      df[14, yardline] <- "No"
-      df[15, yardline] <- "---"
+      df[11, yardline] <- "No"  # Player presence is No
+      df[12, yardline] <- "No"  # Season FE is No
+      df[13, yardline] <- "No"  # Coach FE is No
+      df[14, yardline] <- "---"
     }
   }
   
@@ -644,7 +654,7 @@ create_dataset_table <- function(dataset_index) {
               latex_gap_space = "0.3em") %>%
     pack_rows("Logit Model", 5, 6, label_row_css = "border-top: 1px solid;",
               latex_gap_space = "0.3em") %>%
-    pack_rows("Controls", 7, 15, label_row_css = "border-top: 1px solid; border-bottom: 2px solid",
+    pack_rows("Controls", 7, 14, label_row_css = "border-top: 1px solid;",
               latex_gap_space = "0.3em") %>%
     footnote(
       general = c(

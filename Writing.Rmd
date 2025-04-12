@@ -15,6 +15,13 @@ output:
 knitr::opts_chunk$set(echo=FALSE)
 ```
 
+# Abstract
+This research examines the critical decision-making process on fourth downs, focusing on whether coaches make optimal decisions based on player capabilities. Using a newly engineered dataset that incorporats detailed player statistics from 2017-2023, we analyze the causal and predictive factors influencing fourth down decisions and outcomes. Our Generalized Inverse Mills Ratio reveals coaches factor in unobserved variables during fourth down decisions and properly evaluate player performance in these situations. However certain player archetypes, such as quarterbacks that excel in short passes, are not properly evaluated. We find significant impacts from other specific player positions, with offensive linemen showing strong joint significance on conversion but not on coaching decisions. The findings provide actionable insights for NFL coaches to identify key signals in fourth down situations and optimize player selection and team build for these critical plays.
+
+# Keywords
+
+NFL, decision making, fourth down, player analysis, selection bias
+
 # Introduction
 
 ## Context
@@ -31,9 +38,9 @@ A result like this causes one to ask the question “Did the Lions make the righ
 
 We must be wary of any recommendation that is given to a head coach. The truth is that we are not on the field, in the locker rooms, or in team meetings. This means coaches may know more then us in certain game time decision. We must approach this topic with the idea of being more practical and clear to coaches. If we are simply pointing our algorithms and giving black-box predictions we lose all credibility as one would be oblivious to the true depth of decision making in the NFL.
 
-In our analysis we discover via our Generalized Inverse Mills Ratio that coaches are able to factor in variables that are unseen in our data in the decision making process on fourth downs. Coaches also show signs of being able to properly evaluate the performance of players in fourth down situations. However, certain archetypes of quarterback are not being properly evaluated and factored into decision making by coaches.
+In our analysis we discover via our Generalized Inverse Mills Ratio that coaches are able to factor in variables that are unseen in our data in the decision making process on fourth downs. Coaches also show signs of being able to properly evaluate the performance of players in fourth down situations. However, certain archetypes of quarterback are not being properly evaluated and factored into decision making by coaches. Other positions such as offensive linemen, running backs, tight ends, and linebackers are also not being properly assessed by coaches on these "last chance" attempts.
 
-## Key Research Questions
+## Research Questions
 
 This leads us to have a need to answer some key questions about fourth downs in the NFL. First, are coaches in the NFL actually better at making these decisions than analysts? Second, is there any predictive power in the performance of players? The type of data we have created and work with is incredibly detailed and the first of its kind. One would ask if practical applications of this method could be used in decision making. Finally, do these key variables about players have a causal effect on the outcome of fourth down attempts? Answering these questions will allow coaches to look for key signals in fourth down situations and to know which players to start on that fourth down if it is decided to attempt. This also can be applied in discovering specialty players that are overlooked due to poor performances in situations that are not similar to fourth down.
 
@@ -93,7 +100,7 @@ Our variables that we work with fall into one of two categories. They are either
 
 ## Tools
 
-The following models include several categories of control variables: *Game Situation Variables* capturing tactical contexts like distance needed, timeouts remaining, and time factors; *Coach Variables* reflecting experience, tenure, background, and historical decision patterns; *Team Stats* measuring performance metrics, efficiency ratings, and formation tendencies; *Season/Team FE* controlling for organizational factors unique to each team-season combination; *Coach FE* isolating individual coaching philosophies and tendencies; *Player Presence* binary indicators tracking which specific players or positions are on the field; *Control Def. Players* accounting for defensive quality, positioning, and scheme; and *Control Off. Players* measuring offensive personnel capabilities and skill ratings. 
+The following models include several categories of control variables: *Game Situation Variables* capturing tactical contexts like distance needed, timeouts remaining, and time factors; *Coach Variables* reflecting experience, tenure, background, and historical decision patterns; *Team Stats* measuring performance metrics, efficiency ratings, and formation tendencies; *Season FE* controlling for organizational factors unique to each team-season combination; *Coach FE* isolating individual coaching philosophies and tendencies; *Player Presence* binary indicators tracking which specific players or positions are on the field; *Control Def. Players* accounting for defensive quality, positioning, and scheme; and *Control Off. Players* measuring offensive personnel capabilities and skill ratings. 
 
 Tools that have both predictive and causal traits are being employed.
 
@@ -226,7 +233,7 @@ As a note while punters do not show signs of significantly affecting the fourth 
 
 ## Generalized Inverse Mills Ratio (GIMR)
 
-In examining the following tables the significance of our GIMR is confirmed. This tells us that coaches in the NFL see factors that we cannot and act on them in the proper way. When a coach is more likely to attempt a fourth down conversion attempt that they are then also more likely to convert that fourth down attempt due to unseen variables. 
+In examining the following tables one can see significance of our GIMR is confirmed. This tells us that coaches in the NFL see factors that we cannot and act on them in the proper way. When a coach is more likely to attempt a fourth down conversion attempt that they are then also more likely to convert that fourth down attempt due to unseen variables. The GIMR also allows for bias free interpretation of the marginal effects of variables across models.
 
 ## Player Analysis
 
@@ -379,7 +386,7 @@ In revisiting our original research questions we find encouraging but mixed resu
 
 # Future Research or Improvments
 
-In the selection of what timeframe to use for the measurement of player performance we initially tested with the lengths of 3 weeks, 12 weeks and 3 years. While it became very clear quickly that the 12 week measure strike the best balance between being sensitive to trends and avoiding noise generally, there should also be research on what the best timeframe for measuring the quality of a player is. 
+In the selection of what timeframe to use for the measurement of player performance we initially tested with the lengths of 3 weeks, 12 weeks and 3 years. While it became very clear quickly that the 12 week measure strike the best balance between being sensitive to trends and avoiding noise generally, there should also be research on what the best time frame for measuring the quality of a player is. 
 
 The biggest question that needs empirical answering is why the starter player measurements capture more statistical significance then the on-field measurement techniques. While some initial work has been done here, this is a scenario in which theory and robustness checks must be employed.
 
