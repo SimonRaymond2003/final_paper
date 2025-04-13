@@ -8,7 +8,14 @@ output:
     toc: true
     toc_depth: 3
     number_sections: true
-    extra_dependencies: ["float", "placeins"]
+    extra_dependencies: ["float", "placeins", "subcaption", "fancyhdr"]
+header-includes:
+  - \usepackage{fancyhdr}
+  - \pagestyle{fancy}
+  - \fancyhf{}
+  - \fancyhead[R]{\thepage}
+  - \renewcommand{\headrulewidth}{0pt}
+  - \fancypagestyle{plain}{\pagestyle{fancy}}
 ---
 
 ```{r setup, include=FALSE}
@@ -56,7 +63,7 @@ Goff and Locke (2019) found when revisiting Romer’s framework that Romer’s c
 
 On top of this, there seems to be evidence that coaches are more cautious when their job is on the line. Owens and Roach (2018) found that in the NCAA coaches are relatively more conservative when they are more likely to be fired. At the same time they found when a coach was likely to be promoted they behave more aggressive then normal.
 
-## "Momentum"
+## Momentum
 
 If a team feels to be “on fire” should they be more aggressive since they feel they have momentum? A important area of literature is the fallacy of the “hot hand”. The hot hand is a cognitive bias that leads people to believe that a person who has a successful outcome is more likely to have a successful outcome in future attempts. Gilovich et al. (1985) investigated the “hot hand” and “shooting streaks” in basketball. They found that both players and fans believed in the fallacy despite shots being independent of each other. Losak et al. (2023) similarly discovered that fantasy baseball users gravitated towards “hot” players. At the same time they were unable to identify a viable hot hand strategy in DraftKings DFS baseball.
 
@@ -106,15 +113,15 @@ Tools that have both predictive and causal traits are being employed.
 
 ### Predictive Models
 
-After filtering out column with too many NA Values (at a threshold of 20 %) we maintain 35,000+ different player variables. This clearly is a situation where predictive tools such as Random Forest and XGBoosting thrive. In the use of XGBoost we first use boostrapping to tune for optimal hyperparameters. Second we will run the tuned model on 1000 train/test bootstrapped splits of data to report the Area Under the Receiving Operator Curve (AUC). This process will be done when predicting attempts and conversion.
+After filtering out column with too many NA Values (at a threshold of 20 %) we maintain 50,000+ different player variables. This clearly is a situation where predictive tools such as Random Forest and XGBoosting thrive. In the use of XGBoost we first use boostrapping to tune for optimal hyperparameters. Second we will run the tuned model on 1000 train/test bootstrapped splits of data to report the Area Under the Receiving Operator Curve (AUC). This process will be done when predicting attempts and conversion.
 
 Similarly we can enact Random Forest to receive an Out-of-Bag AUC. Random Forest will also let us receive insight into what variables have high importance in predictions based on MDA and MDI. This ranking of variables not only allows us to feature select for XGBoosting but it also assisted in watching what variables could be considered for causal analysis.
 
 ### Causal Models
 
-For the causal analysis we will be employing the a form of the Heckman correction. This is due to the selection bias in fourth downs. Since not all fourth downs are attempted, we do not have data on the fourth downs that never happened. We look to deal with this bias by using an evolved verison of Heckman's original model. In the original paper, it was proposed to use a two step process. In the selection step one would predict the probability of being selected while including a variable that is exogenous to the actual outcome that we are interested in. This estimated probability is then converted into the IMR and used to control for selection bias in the outcome step. This process however assumes linear relationships in the selection stage.
+For the causal analysis we will be employing a form of the Heckman correction. This is due to the selection bias in fourth downs. Since not all fourth downs are attempted, we do not have data on the fourth downs that never happened. We look to deal with this bias by using an evolved verison of Heckman's original model. In the original paper, it was proposed to use a two step process. In the selection step one would predict the probability of being selected while including a variable that is exogenous to the actual outcome that we are interested in. This estimated probability is then converted into the IMR and used to control for selection bias in the outcome step. This process however assumes linear relationships in the selection stage.
 
-In our case we are in fact not dealing with linear relationships in the selection stage. This is discovered by how we have a increase of almost 20 %pts in AUC when predicting attempts with a XGBoost model instead of a linear model. Therefore our first step in correcting selection bias looks to predict the probability of an attempt of a fourth down. This prediction then is converted into a Generalized Inverse Mills Ratio that is not bound to the classical assumptions of Heckman's original IMR. We then place our GIMR in our outcome equation when estimating the conversion of a fourth down to control for selection bias. 
+In our case we are in fact not dealing with linear relationships in the selection stage. This was discovered by how we have a increase of almost 20 %pts in AUC when predicting attempts with a XGBoost model instead of a linear model. Therefore our first step in correcting selection bias looks to predict the probability of an attempt of a fourth down. This prediction then is converted into a Generalized Inverse Mills Ratio that is not bound to the classical assumptions of Heckman's original IMR. We then place our GIMR in our outcome equation when estimating the conversion of a fourth down to control for selection bias. 
 
 ## Framework
 
@@ -208,7 +215,7 @@ Models are estimated separately for offensive outcomes (grades, yards, completio
 
 ## Exogeneity of Kicker and Punter Grades
 
-  A key feature in our sample selection correction model, is the exogeneity of a variable that influences the selection equation. In American Football there is the luxery of using third down conversions as a selection bias free area. This is due to how conditions such as desperation or play calling cause a third down to be treated similarly to a fourth down by the coaches. A fourth down is a teams last attempt for that offensive drive. While not in all, there are many cases of third down provide the similar conditions in terms of the coaches decision making. For example if the ball is on a teams own 20 yard line and they are on third and 10, the coach will treat this attempt as a "last chance". This is due to the fact that if the team does not convert on third down they will be forced to punt the ball. There is no situation here where the team can even consider kicking a field goal.
+  A key feature in our sample selection correction model, is the exogeneity of a variable that influences the selection equation. In American Football there is the luxery of using third down conversions as a selection bias free area. This is due to how conditions such as desperation or play calling cause a third down to be treated similarly to a fourth down by coaches. A fourth down is a teams last attempt for that offensive drive. While not in all, there are many cases of third down provide the similar conditions in terms of the coaches decision making. For example if the ball is on a teams own 20 yard line and they are on third and 10, the coach will treat this attempt as a "last chance". This is due to the fact that if the team does not convert on third down they will be forced to punt the ball. There is no situation here where the team can even consider kicking a field goal.
 
   We can first note that the grades of a teams kicker is positively significant in it's effect on the decision to attempt a fourth down. Exogenity of the kicker is now required in the case of the outcome of fourth downs. 
   
@@ -261,11 +268,11 @@ The following tables displays the results of the Offensive Player Grades Models 
 \end{table}
 ```
 
-It is found that the effect of an on-field quarterback receiving positively significant Marginal Effect across all model types. This finding exemplifies how quarterbacks that excel in passing the ball on quicker routes perform better on fourth downs. Contrary to this a starting quarterback's grades are not significant in the decision making of coaches whether to attempt a fourth down. This is to say that the coaches fail to properly factor in the specific archetypes of quarterback that their team possesses. While the strength of significance with the starter versions of the models is very weak, the following table 4 cannot find a statistically significant difference between the marginal effects of the on-field and starter short passing grades for quarterbacks. However, there is a statistical different between the on-field MEs for quarterback grades and the Attempt models's MEs of quarterback grades.
+It is found that the effect of an on-field quarterback is positively significant across all model types. This finding exemplifies how quarterbacks that excel in passing the ball on quicker routes perform better on fourth downs. Contrary to this a starting quarterback's grades are not significant in the decision making of coaches whether to attempt a fourth down. This is to say that the coaches fail to properly factor in the specific archetypes of quarterback that their team possesses. While the strength of significance with the starter versions of the models is weaker, the following table 4 cannot find a statistically significant difference between the marginal effects of the on-field and starter short passing grades for quarterbacks. However, there is a statistical different between the on-field marginal effects for quarterback grades and the attempt models' marginal effects of quarterback grades.
 
 Similarly we see the Tight End 1 slot shows significance at a p-value of 0.05 in both on-field and starter models in terms of their pass blocking grades. The further lack of any positive significance in terms of a Tight End's pass catching grades tells us that a tight end's ability to block is more important then their ability to catch the ball in fourth down situations. Similarly to Quarterbacks, the coaches fail to properly factor in the specific archetype of tight end that their team possesses as there is a lack of significance within attempt models.
 
-The positive significance of running back grades in our attempt models demonstrates that coaches will factor in a running back in a fourth down situation. Intuitively this would make sense as the ball is often run on fourth down and the runningback would appear to be a key player in running the ball. However there is a lack of significance of the running back on the actual conversion of the attempt on fourth down. To support this the offensive linemen we will see show strong joint significance on conversion and not on attempt decisions. This suggests that coaches are overly focusing on the skill of their running back rather then the skill of their linemen.
+The positive signs of significance of running back grades in our attempt models suggests that coaches will factor in a running back in a fourth down situation. This checks out intuitivly as the ball is often run on fourth down and the running back would appear to be a key player in running the ball. However there is a lack of significance of the running back on the actual conversion of the attempt on fourth down. To support this the offensive linemen we will see show strong joint significance on conversion and not on attempt decisions. This suggests that coaches are overly focusing on the skill of their running back rather then the skill of their linemen.
 
 
 ```{=latex}
@@ -276,7 +283,7 @@ The positive significance of running back grades in our attempt models demonstra
 \end{table}
 ```
 
-The following tables display joint significance of the Offensive Player Grades Models across LPM, probit and logit models. Here they are grouped by position groups. This analysis is useful in the case of where a position has multiple players that are on the field of that position. For example, the Offensive Line has 5 players that are on the field at once. In our data we generalize the positions of these players from positions like left tackle, left guard, center, right guard and right tackle to avoid data loss when matching players into there designated slots. For example if an on-field left tackle where to play a snap at left guard this would create a missing value when we look to match a player to their respective column. This same logic applies for the defensive players as well.
+The following tables display joint significance of the Offensive Player Grades Models across LPM, probit and logit models. Here they are grouped by position groups. This analysis is useful in the case of where a position has multiple players that are on the field of that position. For example, the offensive line has 5 players that are on the field at once. In our data we generalize the positions of these players from positions like left tackle, left guard, center, right guard and right tackle to avoid data loss when matching players into there designated slots. For example if an on-field left tackle where to play a snap at left guard this would create a missing value when we look to match a player to their respective column. This same logic applies for the defensive players as well.
 
 While this generalization creates a loss of position tracking in our individual models, we still can use the joint significance to extract meaningful causal inferences. For example we can observe how the Starter models find signifiance with the offensive line as a whole. The offensive line grade's are missed by coaches in their attempt models.
 
@@ -288,8 +295,7 @@ While this generalization creates a loss of position tracking in our individual 
 \end{table}
 ```
 
-
-In our last set of offensive F-values find that our starter models show significance for our entire offense as a whole. This is consistent across our robustness checks when models are ran with yards and completions as well. Attempt models then show no indication of the offensive players jointly having a influence on the attempt of a fourth down.
+In our last set of offensive F-values tables, we find that our starter models show significance for our entire offense as a whole. This is consistent across our robustness checks when models are ran with yards and completions as well. Attempt models then show no indication of the offensive players jointly having a influence on the attempt of a fourth down.
 
 ```{=latex}
 \begin{table}[H]
@@ -339,15 +345,15 @@ Across our different robustness checks models we find that the defensive players
 \end{table}
 ```
 
-The interpretation of starter and on-field Models leads us to ask why there is a difference in quality of statistical significance. In our F-Statistic tables starter models appear to capture the performance of positions and teams better. Individual player features also seem to measure player performance better as show by a larger amount of significant variables. This leads us to believe that starter models have less noise in measurement then on-field Models due to a higher consistency of players. On-field measurements are subject to players being subbed in and out of the game. While it provides greater detail in measurement it makes player slots have more variance in terms of which players are present where. For example the LB 2 of a team can be slotted into either LB slot 1 or 2 depending on the availability of the LB 1 in an on-field play. However for a given game that LB 2 player will stay in the second slot for the entire game. 
+The interpretation of starter and on-field models leads us to ask why there is a difference in quality of statistical significance. In our F-Statistic tables starter models appear to capture the performance of positions and teams better. Individual player features also seem to measure player performance better as show by a larger amount of significant variables. This leads us to believe that starter models have less noise in measurement then on-field models due to a higher consistency of players. On-field measurements are subject to players being subbed in and out of the game. While it provides greater detail in measurement it makes player slots have more variance in terms of which players are present where. For example the LB2 of a team can be slotted into either LB slot 1 or 2 depending on the availability of the LB1 in an on-field play. However for a given game that LB 2 player will stay in the second slot for the entire game. 
 
-Our second possible explanation is that the starter measurements capture more about the culture, makeup and coaching of a team. If a team has "better" players they are more likely to convert a fourth down due to the skill of the players on the field but also from the experience that is passed onto other athletes. Similar to this there is more information about a team for the starter columns. This is because the "starters" of a team can be much more then just 11 players on offense and 11 players on defense. This is due to the variation in offensive but especially defensive formations.
+Our second explanation is that the starter measurements capture more about the culture, makeup and coaching of a team. If a team has "better" players they are more likely to convert a fourth down due to the skill of the players on the field but also from the experience that is passed onto other athletes. Similar to this there is more information about a team for the starter columns. This is because the "starters" of a team can be much more then just eleven players on offense and eleven players on defense. This is due to the variation in offensive but especially defensive formations.
 
 ### Predictive Algorithms
 
-In the following predictive analysis we have 2 main questions. First, are the conversions on fourth down predictable and do player specific factors help this process? Second do starter or on-field statistics contain more predictive power? The following figure displays the results of our XGBoosting algorithm in predicting the result of a fourth down attempt. The model was tested on 1000 bootstrapped test data sets after hyperparameters where tuned. 
+In the following predictive analysis we have two main questions. First, are the conversions on fourth down predictable and do player specific factors help this process? Second do starter or on-field statistics contain more predictive power? The following figure displays the results of our XGBoosting algorithm in predicting the result of a fourth down attempt. The model was tested on 1000 bootstrapped test data sets after hyperparameters where tuned. 
 
-To answer our first question we create models that possess different "rounds". The data initially is the top 50 base columns, based on MDA, that have no player specific information. So our round 0 dataset is lacking of any player specific information. As rounds are added it grabs one the best variable, by MDA, for each positional slot. So the round 1 dataset has one variable describing the QB1 position, the round 2 dataset has two variables describing the QB1 position and so on.
+To answer our first question we create models that are run engineered datasets that went through different "rounds". The data initially is the top 50 base columns, based on MDA, that have no player specific information. So our round 0 dataset is lacking of any player specific information. As rounds are added it grabs one the best variable, by MDA, for each positional slot. So the round 1 dataset has one variable describing the QB1 position, the round 2 dataset has two variables describing the QB1 position and so on.
 
 ```{=latex}
 \begin{figure}[H]
@@ -359,34 +365,39 @@ To answer our first question we create models that possess different "rounds". T
 
 An AUC hovering around 0.7 is quite valuable when we consider the context of what we are predicting. What is most encouraging however is we see that AUC of algorithms that possess player colums (rounds 1, 2 and 5 datasets) all consistently perform better then the AUC of the datasets that do not contain player columns (round 0 dataset). 
 
-The following two sets of tables compare selection and outcome models when run with tuned XGBoosting on data that uses just on-field player statistics vs starter player statistics. 
+The following two sets of tables compare selection and outcome models when run with tuned XGBoosting on data that uses just on-field player statistics vs starter player statistics.
 
-```{=latex}
-\begin{figure}[H]
-\centering
-\caption{Selection AUCs}
-\includegraphics[width=\textwidth]{selection_models_comparison.png}
-\end{figure}
-```
-
-```{=latex}
-\begin{figure}[H]
-\centering
-\caption{Conversion AUCs}
-\includegraphics[width=\textwidth]{conversion_models_comparison.png}
-\end{figure}
-```
+\begin{table}[H]
+    \centering
+    \caption{Comparison of Selection and Conversion AUCs for different models}
+    \label{tab:combined_aucs}
+    
+    \begin{subtable}{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{selection_models_comparison.png}
+        \caption{Selection AUCs}
+        \label{tab:selection_aucs}
+    \end{subtable}
+    
+    \vspace{0.25cm}
+    
+    \begin{subtable}{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{conversion_models_comparison.png}
+        \caption{Conversion AUCs}
+        \label{tab:conversion_aucs}
+    \end{subtable}
+\end{table}
 
 From the previous tables we can reason that in terms of pure predictive power there is little difference in the AUC of the starter and on-field models. This highlights a need for further work as we are finding little to no difference in the predictive power of the two models but a difference in the statistical significance of the of the methods.
 
-
 ## Discusion
 
-In revisiting our original research questions we find encouraging but mixed results. On one hand our GIMR is significant which both confirms selection bias (that we correct for) and tells us that coaches are able to factor in variables that we cannot see in our data. This is in line with theory, as we would imagine that the coaches know their teams better than we do and therefore are able to make better decisions. However, decision makers in the NFL are not perfect and fail to identify key archetypes of players such as Quarterbacks that excel in short passing. While a team can decide to simply adjust their decision making based on their own and opposing players they also have the option of building a team to to specifically excel on in these cases. This would look like searching for Tight Ends that specifically excel in pass blocking or shift the focus of the run game from the running back to the offensive line.
+In revisiting our original research questions we find encouraging but mixed answers to our questions. Our Generalized Inverse Mills Ratio is significant which both confirms selection bias (that we correct for) and tells us that coaches are able to factor in variables that we cannot see in our data. This is in line with theory, as we would imagine that coaches know their teams better than we do and therefore make better decisions. Our analysis of third down situations further supports this. It is found that kicker grades significantly impact third down play calling, particularly in the middle of the field where field goal attempts become viable if the third down fails. This demonstrates coaches' consideration of special teams abilities in their offensive decision-making, even before reaching fourth down. Despite this awareness, decision makers in the NFL are not perfect and fail to identify key archetypes of players such as Quarterbacks that excel in short passing. While a team can decide to simply adjust their decision making based on their own and opposing players, they also have the option of building a team to specifically excel in these situations. This would look like searching for Tight Ends that specifically excel in pass blocking or shifting the focus of the run game from the running back to the offensive line.
 
 # Future Research or Improvments
 
-In the selection of what timeframe to use for the measurement of player performance we initially tested with the lengths of 3 weeks, 12 weeks and 3 years. While it became very clear quickly that the 12 week measure strike the best balance between being sensitive to trends and avoiding noise generally, there should also be research on what the best time frame for measuring the quality of a player is. 
+In the selection of what timeframe to use for the measurement of player performance we initially tested with the lengths of 3 weeks, 12 weeks and 3 years. It became very clear that the 12 week measure strikes the best balance between being sensitive to trends and avoiding noise generally. However, there should also be research on what the best time frame for measuring the quality of a player is. 
 
 The biggest question that needs empirical answering is why the starter player measurements capture more statistical significance then the on-field measurement techniques. While some initial work has been done here, this is a scenario in which theory and robustness checks must be employed.
 
